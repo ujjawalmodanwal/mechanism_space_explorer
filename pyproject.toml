@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nrnet"
+version = "0.1.0"
+description = "Nanoreactor reaction networks with ML potentials."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "ase>=3.23",
+    "matplotlib>=3.8",
+    "networkx>=3.2",
+    "numpy>=1.26",
+    "pyyaml>=6",
+    "rdkit>=2024.3",
+    "scipy>=1.11",
+    "sella>=2.3",
+]
+
+[project.scripts]
+nrnet = "nrnet.cli:main"
+
+[project.optional-dependencies]
+xtb = ["tblite"]
+mace = [
+    "mace-torch",  # MACE-OMol25 and Egret-1
+]
+uma = ["fairchem-core"]
+aimnet = ["aimnet[ase]"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.uv]
+# mace-torch and fairchem-core pin incompatible versions of shared
+# libraries, so each engine installs into its own environment.
+conflicts = [
+    [{ extra = "mace" }, { extra = "uma" }],
+    [{ extra = "mace" }, { extra = "aimnet" }],
+    [{ extra = "uma" }, { extra = "aimnet" }],
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nrnet"]
+
+[tool.ruff]
+line-length = 80
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+extend-select = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: runs the xtb binary",
+    "engine: needs an ML engine environment",
+]
+addopts = "-m 'not slow and not engine'"

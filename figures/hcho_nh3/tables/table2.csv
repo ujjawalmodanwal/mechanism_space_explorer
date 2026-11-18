@@ -1,0 +1,7 @@
+engine,temperature_k,jaccard,kendall_tau,same_major_product,same_top_path
+aimnet,298.15,,,True,True
+aimnet,600.0,0.0,,False,True
+mace,298.15,,,True,True
+mace,600.0,0.0,,False,True
+egret,298.15,,,True,True
+egret,600.0,0.0,,False,True

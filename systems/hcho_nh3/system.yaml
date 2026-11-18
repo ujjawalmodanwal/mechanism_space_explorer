@@ -1,0 +1,29 @@
+md:
+  # Elevated temperature accelerates reactive barrier crossings in MD.
+  temperature_k: 1000
+  # Total simulation time in picoseconds per replicate trajectory.
+  time_ps: 20
+  # Sub-femtosecond integration time step to permit X-H bond breaking.
+  step_fs: 0.5
+  # Trajectory recording interval in femtoseconds.
+  dump_fs: 10
+  # Metadynamics push strength in Hartree. Chosen by the 2026-11-17 sweep:
+  # 0.2 inside a 4 A wall gave closed-shell products; 0.05 gave none.
+  kpush: 0.2
+  # Metadynamics Gaussian width parameter in Bohr^-2.
+  alp: 1.0
+  # Maximum number of past structures kept as bias references.
+  save: 10
+  # Logfermi wall radius in A; a tight wall forces the two molecules to
+  # meet (xTB's automatic radius let them drift apart).
+  wall_radius_ang: 4.0
+  # Independent replicates; 8 found too few events after filtering.
+  replicates: 32
+  # Base integer random seed for replicate starting geometry rattle.
+  base_seed: 17
+  # Standard deviation of atomic rattle in Angstroms for replicate seeding.
+  rattle_ang: 0.05
+  # Process execution timeout in seconds before aborting replicate.
+  timeout_s: 3600
+  # Minimum lifetime in femtoseconds to retain a persistent intermediate.
+  min_lifetime_fs: 50

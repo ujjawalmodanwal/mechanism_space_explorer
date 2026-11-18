@@ -1,0 +1,8 @@
+{"temperature_k": 298.15, "ranker": "R1", "position": 1, "state": "CH5NO-cfd9fd04", "score": 1.7090082743470703, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 298.15, "ranker": "R2", "position": 1, "state": "CH5NO-cfd9fd04", "score": 1.7090082743470703, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 298.15, "ranker": "R3", "position": 1, "state": "CH5NO-cfd9fd04", "score": 1.0, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 298.15, "ranker": "R4", "position": 1, "state": "CH5NO-cfd9fd04", "score": 2.8929118477316523e-13, "path": []}
+{"temperature_k": 600.0, "ranker": "R1", "position": 1, "state": "CH5NO-cfd9fd04", "score": 2.2382069498389683, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 600.0, "ranker": "R2", "position": 1, "state": "CH5NO-cfd9fd04", "score": 2.2382069498389683, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 600.0, "ranker": "R3", "position": 1, "state": "CH5NO-cfd9fd04", "score": 1.0, "path": ["CH2O-021b6208 + H3N-1414a4ee", "CH5NO-cfd9fd04"]}
+{"temperature_k": 600.0, "ranker": "R4", "position": 1, "state": "CH5NO-cfd9fd04", "score": 5.6811644475923165e-05, "path": []}

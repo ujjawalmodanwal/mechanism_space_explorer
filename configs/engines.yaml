@@ -1,0 +1,42 @@
+# Engine configurations for molecular energy and gradient evaluations.
+
+xtb:
+  # GFN2-xTB semi-empirical method via tblite.
+  model: GFN2-xTB
+  device: cpu
+
+mace:
+  # MACE-OMol25 foundation model.
+  model: extra_large
+  device: cpu
+
+egret:
+  # Rowan Egret-1 checkpoint.
+  model: models/EGRET_1.model
+  device: cpu
+  closed_shell_only: true
+
+uma:
+  # FAIR Universal Molecular Architecture.
+  model: uma-s-1p1
+  device: cpu
+
+aimnet:
+  # AIMNet2 potential.
+  model: aimnet2
+  device: cpu
+
+dft:
+  # Reference DFT via ORCA.
+  # Executable path comes from the NRNET_ORCA environment variable.
+  model: "wB97M-V def2-TZVPD"
+  device: cpu
+  extra:
+    # Number of parallel CPU processes for ORCA.
+    nprocs: 16
+    # Maximum memory per core in megabytes (%maxcore).
+    maxcore_mb: 3000
+    # SCF convergence criteria keyword.
+    scf: TightSCF
+    # Base scratch directory for temporary calculation files.
+    scratch_dir: runs/orca

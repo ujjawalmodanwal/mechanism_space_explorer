@@ -1,0 +1,2 @@
+{"temperature_k": 298.15, "source": "CH2O-021b6208 + H3N-1414a4ee", "states": 6, "reactions": 3, "clamped": 0, "dropped": {"no_ts": 1}}
+{"temperature_k": 600.0, "source": "CH2O-021b6208 + H3N-1414a4ee", "states": 6, "reactions": 3, "clamped": 0, "dropped": {"no_ts": 1}}

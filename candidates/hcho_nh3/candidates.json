@@ -1,0 +1,136 @@
+{
+  "reactant_state": [
+    "CH2O-021b6208",
+    "H3N-1414a4ee"
+  ],
+  "stats": {
+    "events": 187,
+    "event_groups": 40,
+    "candidates": 4,
+    "species": 10,
+    "rejected_multiple_radicals": 160,
+    "rejected_state_mismatch": 18
+  },
+  "candidates": [
+    {
+      "reaction_id": "R001",
+      "state_a": [
+        "CHO-5e7af12d",
+        "H-34ba85c0",
+        "H3N-1414a4ee"
+      ],
+      "state_b": [
+        "CO-72c368ed",
+        "H-34ba85c0",
+        "H-34ba85c0",
+        "H3N-1414a4ee"
+      ],
+      "reactant_keys": [
+        "CHO-5e7af12d"
+      ],
+      "product_keys": [
+        "CO-72c368ed",
+        "H-34ba85c0"
+      ],
+      "mapped_smiles": "[C:1]([O:2])[H:3]>>[C:1][O:2].[H:3]",
+      "n_events": 6,
+      "first_seen_fs": 13160.0,
+      "pair_frame_indices": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R002",
+      "state_a": [
+        "CH2O-021b6208",
+        "H3N-1414a4ee"
+      ],
+      "state_b": [
+        "CH5NO-cfd9fd04"
+      ],
+      "reactant_keys": [
+        "CH2O-021b6208",
+        "H3N-1414a4ee"
+      ],
+      "product_keys": [
+        "CH5NO-cfd9fd04"
+      ],
+      "mapped_smiles": "[C:1](=[O:2])([H:3])[H:4].[N:5]([H:6])([H:7])[H:8]>>[C:1]([O:2][H:7])([H:3])([H:4])[N:5]([H:6])[H:8]",
+      "n_events": 1,
+      "first_seen_fs": 1580.0,
+      "pair_frame_indices": [
+        [
+          6,
+          7
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R003",
+      "state_a": [
+        "CH3N-baf8a3f7",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CH2O-021b6208",
+        "H3N-1414a4ee"
+      ],
+      "reactant_keys": [
+        "CH3N-baf8a3f7",
+        "H2O-2ebfe80f"
+      ],
+      "product_keys": [
+        "CH2O-021b6208",
+        "H3N-1414a4ee"
+      ],
+      "mapped_smiles": "[C-:1]([H:3])=[N+:5]([H:6])[H:8].[O:2]([H:4])[H:7]>>[C:1](=[O:2])([H:3])[H:4].[N:5]([H:6])([H:7])[H:8]",
+      "n_events": 1,
+      "first_seen_fs": 12830.0,
+      "pair_frame_indices": [
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R004",
+      "state_a": [
+        "CH3NO-e12e7f58",
+        "H-34ba85c0",
+        "H-34ba85c0"
+      ],
+      "state_b": [
+        "CH3NO-3bd83c2e",
+        "H-34ba85c0",
+        "H-34ba85c0"
+      ],
+      "reactant_keys": [
+        "CH3NO-e12e7f58"
+      ],
+      "product_keys": [
+        "CH3NO-3bd83c2e"
+      ],
+      "mapped_smiles": "[C:1](/[O:2][H:8])([H:4])=[N:5]/[H:7]>>[C:1](=[O:2])([H:4])[N:5]([H:7])[H:8]",
+      "n_events": 1,
+      "first_seen_fs": 17390.0,
+      "pair_frame_indices": [
+        [
+          10,
+          11
+        ]
+      ]
+    }
+  ]
+}

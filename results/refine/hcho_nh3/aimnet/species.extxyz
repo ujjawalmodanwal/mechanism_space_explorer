@@ -1,0 +1,62 @@
+4
+Properties=species:S:1:pos:R:3 HCHO=T and=T NH3=T reactant=T geometry,=T N=T facing=T C=T at=T 3.5=T A=T charge=0 spin=1 key=CH2O-021b6208 smiles=C=O inchikey=WSFSSNUMVMOOMR-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C       -0.00000000       0.00143244       0.00000000
+O        0.00000001       1.19859752       0.00000000
+H       -0.93520457      -0.58501499       0.00000000
+H        0.93520456      -0.58501498       0.00000000
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH3N-baf8a3f7 smiles="[CH-]=[NH2+]" inchikey=KASBEVXLSPWGFS-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C       -0.60077576      -1.08095015       1.66339714
+H       -1.07937597      -2.07700823       1.58422804
+N       -0.35714159      -0.65735706       0.45752352
+H       -0.56300518      -1.14205168      -0.41087962
+H        0.08139991       0.24367901       0.34747313
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH3NO-3bd83c2e smiles=NC=O inchikey=ZHNUHDYFZUAESO-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C       -0.09300637       0.15584702       0.33843963
+O       -0.24326517       0.07720418       1.53167397
+H       -0.37091557      -0.65841196      -0.34971290
+N        0.42560521       1.23002435      -0.30979374
+H        0.53424538       1.24495884      -1.30482774
+H        0.71322511       2.03546329       0.21840137
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH3NO-e12e7f58 smiles="[H]/N=CO" inchikey=ZHNUHDYFZUAESO-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C       -0.12842769       0.13362387       0.40707356
+O        1.12559838       0.48881009       0.80083797
+H       -0.19498705      -0.84686234      -0.06824451
+N       -1.14644945       0.84510473       0.55993828
+H       -0.90569474       1.72133557       1.01744663
+H        1.73612185      -0.21550960       0.57876487
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH5NO-cfd9fd04 smiles=NCO inchikey=XMYQHJDBLRZMLW-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C       -0.56397994       0.20233829       0.70346862
+O        0.71720929       0.18040068       0.10936360
+H       -1.22322057       0.81955409       0.08802398
+H       -0.94294797      -0.82434347       0.68822666
+N       -0.49172255       0.75437361       2.03984160
+H       -1.40032839       1.04198107       2.37387206
+H        1.14249203       1.00698938       0.35591151
+H       -0.11259816       0.07133724       2.68430658
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CHO-5e7af12d smiles=None inchikey=None multiplicity=2 pbc="F F F"
+C        0.21553173       1.47307360       0.76073708
+O        0.99307978       0.59702478       0.71716113
+H        0.16757081       2.21636065      -0.11832477
+2
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CO-72c368ed smiles="[C-]#[O+]" inchikey=UGFAIRIUMAVXCW-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C        1.20116889       0.97244678       0.44360385
+O        1.33310998       1.94630417       0.98891486
+1
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=H-34ba85c0 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+H       -1.62229093      -0.94580507       2.99058473
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=H2O-2ebfe80f smiles=O inchikey=XLYOFNOQVPJJNP-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        1.23972366       1.85344075      -0.01962885
+H        1.38529952       2.72108885      -0.39891443
+H        1.72043819       1.85790180       0.80906718
+4
+Properties=species:S:1:pos:R:3 HCHO=T and=T NH3=T reactant=T geometry,=T N=T facing=T C=T at=T 3.5=T A=T charge=0 spin=1 key=H3N-1414a4ee smiles=N inchikey=QGZKDVFQNNGYKY-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+N       -0.00000000      -0.00002404       3.50614652
+H        0.00000001       0.94078863       3.87793466
+H        0.81478929      -0.47038229       3.87795941
+H       -0.81478929      -0.47038231       3.87795942

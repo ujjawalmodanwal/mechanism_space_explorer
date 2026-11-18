@@ -1,0 +1,43 @@
+# Transition state search parameters and convergence thresholds.
+
+search:
+  # Minimum endpoint relaxation force threshold in eV/Å.
+  min_fmax_ev_per_ang: 0.01
+  # Maximum allowable steps for endpoint geometry relaxation.
+  min_max_steps: 1000
+  # Total number of images in climbing-image NEB band (including endpoints).
+  # Two-molecule reactions spend half the band on the approach; 9 images
+  # left the bond change between two images on the HCHO + NH3 test.
+  neb_images: 13
+  # Stage 1: plain NEB, loose threshold, so the band finds the reaction
+  # path before any image climbs. Climbing at once climbed the wrong bump.
+  neb_relax_fmax_ev_per_ang: 0.5
+  neb_relax_max_steps: 300
+  # Stage 2: climbing-image NEB force threshold in eV/Å.
+  neb_fmax_ev_per_ang: 0.05
+  # Maximum allowable optimization steps for the climbing stage.
+  neb_max_steps: 600
+  # Sella saddle point convergence threshold in eV/Å.
+  saddle_fmax_ev_per_ang: 0.01
+  # Maximum allowable optimization steps for Sella saddle search.
+  saddle_max_steps: 500
+  # Cutoff frequency in cm^-1 below which a mode is classified as imaginary.
+  imaginary_threshold_cm: -50.0
+  # Displacement step in Å along imaginary normal mode for endpoint check.
+  confirm_step_ang: 0.1
+
+thermo:
+  # Standard thermochemical temperatures in Kelvin.
+  temperatures_k: [298.15, 600.0]
+
+rank:
+  # Observation time for R4 yields, one hour, decision D7.
+  t_obs_s: 3600.0
+  # R0 keeps products below this reaction free energy.
+  dg_threshold_ev: 0.0
+
+evaluate:
+  # A state counts as a product when its R4 yield reaches this fraction, E2.
+  yield_cutoff: 0.01
+
+

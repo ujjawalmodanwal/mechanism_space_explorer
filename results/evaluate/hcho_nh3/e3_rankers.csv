@@ -1,0 +1,9 @@
+temperature_k,ranker,top1_agree,top3_overlap
+298.15,R0,True,1.0
+298.15,R1,True,1.0
+298.15,R2,True,1.0
+298.15,R3,True,1.0
+600.0,R0,True,1.0
+600.0,R1,True,1.0
+600.0,R2,True,1.0
+600.0,R3,True,1.0
