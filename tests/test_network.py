@@ -92,3 +92,37 @@ def test_clamp_barrier_below_endpoints() -> None:
     assert graph["S1"]["S2"]["ts_ev"] == 2.0
     assert graph["S1"]["S2"]["dg_act_ev"] == 1.0
     assert graph["S2"]["S1"]["dg_act_ev"] == 0.0
+
+
+def test_barrierless_barrier_clamped_to_max() -> None:
+    """
+    Verify barrierless barrier yields TS = max(G_A, G_B) with edge attributes.
+
+    :return: None.
+    :rtype: None
+    """
+    energies = {"S1": 1.0, "S2": 3.0}
+    barriers = [ReactionBarrier("S1", "S2", 0.0, barrierless=True)]
+    graph = build_network(energies, barriers, 298.15)
+    assert graph["S1"]["S2"]["ts_ev"] == 3.0
+    assert graph["S2"]["S1"]["ts_ev"] == 3.0
+    assert graph["S1"]["S2"]["barrierless"] is True
+    assert graph["S2"]["S1"]["barrierless"] is True
+    assert graph["S1"]["S2"]["dg_act_ev"] == 2.0
+    assert graph["S2"]["S1"]["dg_act_ev"] == 0.0
+
+
+def test_barrierless_arrow_does_not_increase_clamped_count() -> None:
+    """
+    Verify a barrierless arrow does not increment the clamped barrier count.
+
+    :return: None.
+    :rtype: None
+    """
+    energies = {"S1": 1.0, "S2": 3.0, "S3": 0.5}
+    barriers = [
+        ReactionBarrier("S1", "S2", 0.0, barrierless=True),
+        ReactionBarrier("S1", "S3", -2.0, barrierless=False),
+    ]
+    graph = build_network(energies, barriers, 298.15)
+    assert graph.graph["clamped"] == 1

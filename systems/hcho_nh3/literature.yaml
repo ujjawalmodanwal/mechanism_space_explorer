@@ -1,0 +1,19 @@
+products:
+  - name: aminomethanol
+    smiles: [NCO]
+  - name: methanimine_water
+    smiles: [C=N, O]
+reference: >-
+  Addition barrier about 34 kcal/mol; aminomethanol dehydration barrier
+  230-234 kJ/mol. Zhang, Xu, Lan, JCTC (2023), doi 10.1021/acs.jctc.3c00752,
+  report aminomethanol as the lowest-barrier product (31.4 kcal/mol,
+  B3LYP-D3(BJ)/def2-SVP). Sources for the first two values: to add.
+reactions:
+  - name: aminomethanol_dehydration
+    reactant: lit_aminomethanol.xyz
+    product: lit_methanimine_water.xyz
+    note: >-
+      NH2CH2OH -> CH2=NH + H2O, the second literature step. Not found by
+      the 600 production MD runs (only the direct HCHO + NH3 -> CH2=NH +
+      H2O, once). Aminomethanol is the MD's own (R004); water takes the
+      N-H nearest the O. Added only because the MD missed it.

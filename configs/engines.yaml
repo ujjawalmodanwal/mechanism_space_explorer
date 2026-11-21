@@ -1,41 +1,67 @@
 # Engine configurations for molecular energy and gradient evaluations.
+# Every model is pinned to one checkpoint; library versions are pinned in
+# uv.lock. README.md, "Models and licenses", lists sources and checksums.
 
 xtb:
-  # GFN2-xTB semi-empirical method via tblite.
+  # GFN2-xTB via tblite (0.8.0). The MD uses the xtb binary (6.7.1).
   model: GFN2-xTB
   device: cpu
+  extra:
+    # tblite's default of 250 SCF cycles failed 16 TS searches on
+    # stretched geometries (docs/discovery-log.md, F10). A higher cap
+    # leaves every converged result unchanged. Run with
+    # OMP_NUM_THREADS=1: thread count changes borderline outcomes (F11).
+    max_iterations: 1000
+    # cpd_ma R014 ran 1.55 s per call with the SCF near its cap on every
+    # call (3.1 h for one attempt, then engine_error); other attempts take
+    # under a minute. End an attempt after 20 min as time_limit (PLAN D19).
+    attempt_time_limit_s: 1200
 
 mace:
-  # MACE-OMol25 foundation model.
+  # MACE-OMol25: mace-foundations release mace_omol_0, file
+  # MACE-omol-0-extra-large-1024.model ("extra_large" in mace-torch 0.3.17).
   model: extra_large
   device: cpu
+  # cuEquivariance kernels, GPU only; needs cuequivariance,
+  # cuequivariance-torch and cuequivariance-ops-torch-cuXX.
+  enable_cueq: false
 
-egret:
-  # Rowan Egret-1 checkpoint.
-  model: models/EGRET_1.model
+uma:
+  # FAIR UMA-S 1.2.1 (checkpoints/uma-s-1p2p1.pt in facebook/UMA, MD5
+  # 3497615fd30a24c5b35cd3b41a682e6e), OMol25 task.
+  model: uma-s-1p2p1
+  device: cpu
+  extra:
+    task: omol
+
+aimnet:
+  # AIMNet2-NSE, wB97M, ensemble member 0 (aimnet 0.2.6 registry; sha256
+  # b98b3449b2a3765d...). Spin-aware, unlike the wB97M-D3 family, which
+  # ignores multiplicity and computes radicals as closed shells (PLAN D18).
+  model: aimnet2-nse_0
+  device: cpu
+
+ani1xnr:
+  # ANI-1xnr (Zhang et al., Nat. Chem. 2024): reactive ANI potential trained
+  # on nanoreactor-sampled data at BLYP/TZV2P, H, C, N and O only. torchani
+  # 2.12 models.ANI1xnr, 8-member ensemble, weights ani1xnr.pt fetched on
+  # first use (sha256 beef541802e4cb3d...).
+  # No charge or spin input, so doublets are unsupported (D9).
+  model: ANI1xnr
   device: cpu
   closed_shell_only: true
 
-uma:
-  # FAIR Universal Molecular Architecture.
-  model: uma-s-1p1
-  device: cpu
-
-aimnet:
-  # AIMNet2 potential.
-  model: aimnet2
-  device: cpu
-
 dft:
-  # Reference DFT via ORCA.
+  # Reference DFT via ORCA 6.1.1. Record the ORCA version with each run.
   # Executable path comes from the NRNET_ORCA environment variable.
   model: "wB97M-V def2-TZVPD"
   device: cpu
   extra:
-    # Number of parallel CPU processes for ORCA.
-    nprocs: 16
+    # Number of parallel CPU processes for ORCA (sized for a 10-core,
+    # 16 GB laptop; raise on a cluster node).
+    nprocs: 4
     # Maximum memory per core in megabytes (%maxcore).
-    maxcore_mb: 3000
+    maxcore_mb: 2500
     # SCF convergence criteria keyword.
     scf: TightSCF
     # Base scratch directory for temporary calculation files.

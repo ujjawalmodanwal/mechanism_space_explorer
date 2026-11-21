@@ -1,23 +1,31 @@
 3
-Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=0 replicate=0 time_fs=13160.0 atom_ids="0 1 2" side=before pbc="F F F"
-C        0.27226234       1.22590539       0.99198845
-O        1.06131621       0.43812262       0.81826600
-H        0.04260376       2.62243102      -0.45068101
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=0 replicate="_JSON [\"runs/sweep/hcho_nh3/T300_k0.03/g1\", 21]" time_fs=5010.0 atom_ids="0 1 3" side=before pbc="F F F"
+C        0.81688722       2.45562931       0.81645283
+O        1.19118753       1.47651541       0.39854357
+H        1.09540378       4.10133403      -0.32259108
 8
-Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R002 pair_index=0 replicate=1 time_fs=1580.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
-C        0.02804184       0.64553106       1.18957209
-O       -0.19085881      -0.61181473       0.78267291
-H        1.06141974       1.02352054       1.12745160
-H       -0.66329927       1.42201623       0.82388150
-N       -0.29068945       0.41931230       2.70335027
-H        0.49031469       0.51931452       3.34295797
-H       -0.44320734      -0.62833379       2.19297234
-H       -1.11479384       0.89075254       3.06063714
-6
-Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R004 pair_index=0 replicate=30 time_fs=17390.0 atom_ids="0 1 3 4 6 7" side=before pbc="F F F"
-C        0.03413442      -0.10969489       0.31968458
-O        1.27979575      -0.37527571       0.41963665
-H       -0.68103028      -0.78967434      -0.13426426
-N       -0.18324503       1.05915557       0.83697867
-H       -1.08042025       1.51593235       0.89146522
-H        1.11692667       0.82605931       0.96231594
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R004 pair_index=1 replicate="_JSON [\"runs/sweep/hcho_nh3/T300_k0.035/g2\", 47]" time_fs=2770.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+C        0.34874469       0.02849801       1.14603876
+O       -0.83672821       0.37205598       0.62561009
+H        0.94702958      -0.71330664       0.59246945
+H        0.37691208      -0.21390157       2.22076026
+N        1.05000594       1.41390097       0.96611770
+H        1.82094959       1.44199883       0.30740445
+H        1.28448633       1.90789611       1.82055165
+H       -0.03578160       1.55674615       0.53970221
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R006 pair_index=1 replicate="_JSON [\"runs/sweep/hcho_nh3/T300_k0.035/g3\", 7]" time_fs=3890.0 atom_ids="0 1 2 3" side=before pbc="F F F"
+C        0.47186427       1.20296320       3.12538190
+O       -0.10918910       0.35714919       2.58297168
+H        1.83980081       1.53500886       2.36501587
+H        1.24200943       1.94591851       3.38004512
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R013 pair_index=0 replicate=0 time_fs=0.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+C        0.84401914      -0.34501474       1.12519041
+O       -0.47844121       0.40265677       0.14409945
+H        1.75643396       0.18213804       0.84786939
+H        0.72885452      -1.31968107       0.66375012
+N        0.19841981      -0.12025616       2.28608433
+H        0.58107121       0.69880894       2.74983926
+H       -0.27099433       1.31199537      -0.10936282
+H       -0.66933196       0.32053188       1.35925670

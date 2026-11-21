@@ -6,7 +6,9 @@ reacting atom identification, RDKit labels, reaction SMILES, and spin.
 """
 
 import re
+from pathlib import Path
 
+import ase.io
 import networkx as nx
 from ase import Atoms
 from ase.build import molecule
@@ -24,7 +26,9 @@ from nrnet.chem import (
     species_key,
     species_labels,
     state_key,
+    stereo_descriptor,
 )
+from nrnet.nanoreactor.candidate_store import load_candidates
 
 
 def mol_to_atoms(mol: Chem.Mol) -> Atoms:
@@ -318,3 +322,59 @@ def test_radical_count_counts_open_shell_fragments() -> None:
     bonded = Atoms("HH", positions=[[0, 0, 0], [0.74, 0, 0]])
     assert radical_count(apart, [0, 1]) == 2
     assert radical_count(bonded, [0, 1]) == 0
+
+
+def test_norbornene_anhydride_stereoisomers(
+    cis_norbornene_isomers: list[Atoms],
+) -> None:
+    """
+    Verify endo/exo diastereomers get different keys while enantiomers match.
+
+    :param cis_norbornene_isomers: Embedded cis norbornene anhydride isomers.
+    :type cis_norbornene_isomers: list[Atoms]
+    :return: None.
+    :rtype: None
+    """
+    assert len(cis_norbornene_isomers) == 2
+    endo, exo = cis_norbornene_isomers[0], cis_norbornene_isomers[1]
+    desc_endo = stereo_descriptor(endo)
+    desc_exo = stereo_descriptor(exo)
+    assert desc_endo and desc_exo and desc_endo != desc_exo
+    assert state_key(endo, stereo=True) != state_key(exo, stereo=True)
+    for geom in (endo, exo):
+        mirror = geom.copy()
+        mirror.positions[:, 0] = -mirror.positions[:, 0]
+        assert stereo_descriptor(geom) == stereo_descriptor(mirror)
+        assert state_key(geom, stereo=True) == state_key(mirror, stereo=True)
+
+
+def test_hcho_nh3_stored_keys_preserved() -> None:
+    """
+    Verify HCHO, NH3 and candidates/hcho_nh3 species preserve stored keys.
+
+    :return: None.
+    :rtype: None
+    """
+    hcho, nh3 = molecule("H2CO"), molecule("NH3")
+    assert stereo_descriptor(hcho) == "" and stereo_descriptor(nh3) == ""
+    assert state_key(hcho, stereo=True) == state_key(hcho, stereo=False)
+    assert state_key(nh3, stereo=True) == state_key(nh3, stereo=False)
+    cand_path = Path("tests/data/hcho_nh3_candidates")
+    cset = load_candidates(cand_path)
+    assert cset.reactant_state == ("CH2O-021b6208", "H3N-1414a4ee")
+    frames = ase.io.read(cand_path / "species.extxyz", index=":")
+    for frame in frames:
+        assert state_key(frame, stereo=True) == (frame.info["key"],)
+
+
+def test_h2_is_one_molecule() -> None:
+    """
+    Verify H2 at its GFN2-xTB bond length is bonded, and far H atoms are not.
+
+    :return: None.
+    :rtype: None
+    """
+    h2 = Atoms("H2", positions=[[0.0, 0.0, 0.0], [0.0, 0.0, 0.777]])
+    assert connectivity_graph(h2).number_of_edges() == 1
+    apart = Atoms("H2", positions=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.2]])
+    assert connectivity_graph(apart).number_of_edges() == 0

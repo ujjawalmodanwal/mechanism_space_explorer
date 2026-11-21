@@ -1,0 +1,44 @@
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R001 pair_index=2 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g4\", 15]" time_fs=8530.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O        2.31033621      -1.28553000      -0.76649063
+C        1.57996113      -0.38263927      -0.84687697
+O        1.21890459       0.62998567      -1.49052878
+H        0.48767740       0.45291960      -0.42161043
+H        0.61505017      -0.31740794       0.24191295
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R003 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g2\", 21]" time_fs=6220.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O       -0.24986782       0.35302583       0.38755911
+C       -0.90958661       0.58084825      -1.31973776
+O       -0.24124233       0.90091284      -2.18474377
+H        0.44092999      -0.32367441       0.42729830
+H       -1.40726107       0.12368169      -0.37148867
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R005 pair_index=1 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g3\", 11]" time_fs=9625.0 atom_ids="0 1 2 3" side=before pbc="F F F"
+O        0.32337910       0.96868806       1.75947597
+C        0.57113624       0.57377218       0.64766388
+O        0.39478502       0.34738765      -0.48007508
+H       -0.87799646       1.52565539       1.96955720
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R007 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g6\", 15]" time_fs=6170.0 atom_ids="0 1 2 4" side=before pbc="F F F"
+O       -0.30362016       0.44434919      -0.24979791
+C        0.38469848       0.21484683      -1.18061891
+O        0.71221390      -0.13974180      -2.25757448
+H        1.72503854       0.68076717      -0.63774537
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R008 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g6\", 30]" time_fs=4965.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+O        1.31389830       0.79296893       0.65376901
+C        0.59209587       0.30255177      -0.37168438
+O        1.15998837       0.18826779      -1.53572642
+H        2.23341713       0.81907775       0.34816032
+H       -0.45928992       0.56522775      -0.26657364
+O        0.45573589      -1.41562287      -0.23197689
+H        1.04823856      -1.74541669       0.45688971
+H        1.01559899      -1.02872312      -1.23653346
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R010 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.035/g6\", 4]" time_fs=8870.0 atom_ids="0 1 2 3 5 7" side=before pbc="F F F"
+O        0.08389363       0.89538900      -0.41531114
+C        1.56265700       0.34796407      -0.89362272
+O        2.18961567       1.18734979      -0.19996889
+H       -0.42504548       0.21898450       0.05095034
+O        1.65761160      -0.54195121      -1.64541852
+H        1.01352097       1.45468634       0.15425842

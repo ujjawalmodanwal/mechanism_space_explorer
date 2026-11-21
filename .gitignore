@@ -16,3 +16,6 @@ runs/
 # macOS
 .DS_Store
 models/
+
+# Local secrets
+.env

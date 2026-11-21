@@ -1,0 +1,155 @@
+{
+  "reactant_state": [
+    "CH2O2-2a71d22e"
+  ],
+  "stats": {
+    "events": 652,
+    "event_groups": 11,
+    "candidates": 4,
+    "species": 8,
+    "reactive_replicates": 340,
+    "rejected_multiple_radicals": 554
+  },
+  "candidates": [
+    {
+      "reaction_id": "R001",
+      "state_a": [
+        "CH2O2-2a71d22e"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H2-212475fb"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H2-212475fb"
+      ],
+      "mapped_smiles": "[O:1]=[C:2]([O:3][H:4])[H:5]>>[H:4][H:5].[O:1]=[C:2]=[O:3]",
+      "n_events": 68,
+      "first_seen_fs": 5175.0,
+      "source": "md",
+      "literature_name": "decarboxylation",
+      "pair_frame_indices": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R002",
+      "state_a": [
+        "CH2O2-2a71d22e"
+      ],
+      "state_b": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e"
+      ],
+      "product_keys": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f"
+      ],
+      "mapped_smiles": "[O:1]=[C:2]([O:3][H:4])[H:5]>>[C-:2]#[O+:3].[O:1]([H:4])[H:5]",
+      "n_events": 25,
+      "first_seen_fs": 7725.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          6,
+          7
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          10,
+          11
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R003",
+      "state_a": [
+        "CHO2-f92468da",
+        "H-34ba85c0"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0",
+        "H-34ba85c0"
+      ],
+      "reactant_keys": [
+        "CHO2-f92468da"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0"
+      ],
+      "mapped_smiles": "[O:1][C:2][O:3][H:4]>>[H:4].[O:1][C:2][O:3]",
+      "n_events": 4,
+      "first_seen_fs": 3090.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          12,
+          13
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R004",
+      "state_a": [
+        "CHO2-063d45b9",
+        "H-34ba85c0"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0",
+        "H-34ba85c0"
+      ],
+      "reactant_keys": [
+        "CHO2-063d45b9"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0"
+      ],
+      "mapped_smiles": "[O:1][C:2]([O:3])[H:5]>>[H:5].[O:1][C:2][O:3]",
+      "n_events": 1,
+      "first_seen_fs": 1085.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          18,
+          19
+        ]
+      ]
+    }
+  ]
+}

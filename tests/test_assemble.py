@@ -110,6 +110,22 @@ def test_reaction_barrier_missing_species() -> None:
     assert reason == DROP_SPECIES_NOT_OK
 
 
+def test_reaction_barrier_barrierless() -> None:
+    """
+    Verify reaction_barrier returns barrierless barrier with zero activation.
+
+    :return: None.
+    :rtype: None
+    """
+    cand = Candidate("R1", ("A",), ("B",), ("A",), ("B",), (), "", 1, 0.0)
+    row = {"status": "barrierless"}
+    species_g = {"A": 1.0, "B": 2.0}
+    b, reason = reaction_barrier(cand, row, species_g, 298.15)
+    assert reason is None and b is not None
+    assert b.barrierless is True and b.dg_act_ev == 0.0
+    assert b.state_a == "A" and b.state_b == "B"
+
+
 def test_r1_kept_at_room_temperature(
     fake_refine_results: tuple[CandidateSet, RefinePaths],
 ) -> None:

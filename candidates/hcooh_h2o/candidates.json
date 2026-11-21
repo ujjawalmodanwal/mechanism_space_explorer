@@ -1,0 +1,370 @@
+{
+  "reactant_state": [
+    "CH2O2-2a71d22e",
+    "H2O-2ebfe80f"
+  ],
+  "stats": {
+    "events": 184,
+    "event_groups": 25,
+    "candidates": 10,
+    "species": 11,
+    "reactive_replicates": 123,
+    "rejected_multiple_radicals": 128
+  },
+  "candidates": [
+    {
+      "reaction_id": "R001",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H2-212475fb",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H2-212475fb"
+      ],
+      "mapped_smiles": "[O:1]([C:2](=[O:3])[H:5])[H:4]>>[H:4][H:5].[O:1]=[C:2]=[O:3]",
+      "n_events": 10,
+      "first_seen_fs": 6615.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R002",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H2-212475fb",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H2-212475fb",
+        "H2O-2ebfe80f"
+      ],
+      "mapped_smiles": "[O:1]([C:2](=[O:3])[H:5])[H:4].[O:6]([H:7])[H:8]>>[H:4][O:6][H:8].[H:5][H:7].[O:1]=[C:2]=[O:3]",
+      "n_events": 1,
+      "first_seen_fs": 8235.0,
+      "source": "md",
+      "literature_name": "decarboxylation_water_assisted",
+      "pair_frame_indices": [
+        [
+          6,
+          7
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R003",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e"
+      ],
+      "product_keys": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f"
+      ],
+      "mapped_smiles": "[O:1]([C:2](=[O:3])[H:5])[H:4]>>[C-:2]#[O+:3].[O:1]([H:4])[H:5]",
+      "n_events": 21,
+      "first_seen_fs": 6220.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          8,
+          9
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          12,
+          13
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R004",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "product_keys": [
+        "CO-72c368ed",
+        "H2O-2ebfe80f",
+        "H2O-2ebfe80f"
+      ],
+      "mapped_smiles": "[O:1]=[C:2]([O:3][H:4])[H:5].[O:6]([H:7])[H:8]>>[C-:2]#[O+:3].[H:4][O:6][H:8].[O:1]([H:5])[H:7]",
+      "n_events": 3,
+      "first_seen_fs": 5670.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          14,
+          15
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          18,
+          19
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R005",
+      "state_a": [
+        "CHO2-f92468da",
+        "H-34ba85c0",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0",
+        "H-34ba85c0",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CHO2-f92468da"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0"
+      ],
+      "mapped_smiles": "[O:1]([C:2][O:3])[H:4]>>[H:4].[O:1][C:2][O:3]",
+      "n_events": 4,
+      "first_seen_fs": 7010.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          20,
+          21
+        ],
+        [
+          22,
+          23
+        ],
+        [
+          24,
+          25
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R006",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CH2O3-e08c66ff",
+        "H2-212475fb"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "product_keys": [
+        "CH2O3-e08c66ff",
+        "H2-212475fb"
+      ],
+      "mapped_smiles": "[O:1]([C:2](=[O:3])[H:5])[H:4].[O:6]([H:7])[H:8]>>[H:5][H:7].[O:1]([C:2](=[O:3])[O:6][H:8])[H:4]",
+      "n_events": 3,
+      "first_seen_fs": 3750.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          26,
+          27
+        ],
+        [
+          28,
+          29
+        ],
+        [
+          30,
+          31
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R007",
+      "state_a": [
+        "CHO2-063d45b9",
+        "H-34ba85c0",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0",
+        "H-34ba85c0",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CHO2-063d45b9"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H-34ba85c0"
+      ],
+      "mapped_smiles": "[O:1][C:2]([O:3])[H:5]>>[H:5].[O:1][C:2][O:3]",
+      "n_events": 1,
+      "first_seen_fs": 6170.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          32,
+          33
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R008",
+      "state_a": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "state_b": [
+        "CH4O3-1b786c83"
+      ],
+      "reactant_keys": [
+        "CH2O2-2a71d22e",
+        "H2O-2ebfe80f"
+      ],
+      "product_keys": [
+        "CH4O3-1b786c83"
+      ],
+      "mapped_smiles": "[O:1]([C:2](=[O:3])[H:5])[H:4].[O:6]([H:7])[H:8]>>[O:1]([C:2]([O:3][H:8])([H:5])[O:6][H:7])[H:4]",
+      "n_events": 11,
+      "first_seen_fs": 4965.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          34,
+          35
+        ],
+        [
+          36,
+          37
+        ],
+        [
+          38,
+          39
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R009",
+      "state_a": [
+        "CH2O3-e08c66ff",
+        "H-34ba85c0",
+        "H-34ba85c0"
+      ],
+      "state_b": [
+        "CH3O3-f0971681",
+        "H-34ba85c0"
+      ],
+      "reactant_keys": [
+        "CH2O3-e08c66ff",
+        "H-34ba85c0"
+      ],
+      "product_keys": [
+        "CH3O3-f0971681"
+      ],
+      "mapped_smiles": "[H:5].[O:1]([C:2]([O:3])[O:6][H:7])[H:4]>>[O:1]([C:2]([O:3][H:5])[O:6][H:7])[H:4]",
+      "n_events": 1,
+      "first_seen_fs": 6355.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          40,
+          41
+        ]
+      ]
+    },
+    {
+      "reaction_id": "R010",
+      "state_a": [
+        "CH2O3-e08c66ff",
+        "H2-212475fb"
+      ],
+      "state_b": [
+        "CO2-9d2ea55c",
+        "H2-212475fb",
+        "H2O-2ebfe80f"
+      ],
+      "reactant_keys": [
+        "CH2O3-e08c66ff"
+      ],
+      "product_keys": [
+        "CO2-9d2ea55c",
+        "H2O-2ebfe80f"
+      ],
+      "mapped_smiles": "[O:1]([C:2]([O:3][H:8])=[O:6])[H:4]>>[C:2](=[O:3])=[O:6].[O:1]([H:4])[H:8]",
+      "n_events": 1,
+      "first_seen_fs": 8870.0,
+      "source": "md",
+      "literature_name": null,
+      "pair_frame_indices": [
+        [
+          42,
+          43
+        ]
+      ]
+    }
+  ]
+}

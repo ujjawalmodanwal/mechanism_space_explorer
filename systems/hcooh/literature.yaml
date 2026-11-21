@@ -1,0 +1,19 @@
+products:
+  - name: dehydration_co_h2o
+    smiles: ["[C-]#[O+]", O]
+  - name: decarboxylation_co2_h2
+    smiles: [O=C=O, "[H][H]"]
+reference: >-
+  Gas phase: dehydration dominant, despite a similar decarboxylation
+  barrier. Sources: to add.
+# Reactions added by hand (flagged source=literature in the frozen set).
+# The product file has the start file's atom order, so the mapping is
+# explicit. Used by nrnet freeze --add-literature.
+reactions:
+  - name: decarboxylation
+    reactant: reactant_trans.xyz
+    product: lit_decarboxylation.xyz
+    note: >-
+      HCOOH -> CO2 + H2, concerted; H2 from the O-H and C-H hydrogens.
+      Not found in the first MD sweep, which could not see H2 (bond
+      cutoff bug, fixed 2026-11-18).

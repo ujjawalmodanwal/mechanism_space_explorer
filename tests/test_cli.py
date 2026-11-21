@@ -8,12 +8,14 @@ default constants, trajectory sorting, and end-to-end nanoreactor execution.
 import argparse
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
 
 from nrnet.cli import (
     DEFAULT_CANDIDATES_DIR,
+    DEFAULT_DATA_DIR,
     DEFAULT_ENGINES,
     DEFAULT_FIGURES_DIR,
     DEFAULT_RESULTS_DIR,
@@ -27,6 +29,7 @@ from nrnet.cli import (
     find_replicate_trajectories,
     get_parser,
     main,
+    parse_float_list,
     print_rank_summary,
     replicate_index,
 )
@@ -154,6 +157,22 @@ def test_freeze_parser_defaults() -> None:
     assert args.runs_dir == DEFAULT_RUNS_DIR
     assert args.candidates_dir == DEFAULT_CANDIDATES_DIR
     assert args.engines == DEFAULT_ENGINES
+    assert args.add_literature is False
+
+
+def test_freeze_parser_add_literature_option() -> None:
+    """
+    Verify freeze subcommand parser sets add_literature flag when passed.
+
+    :return: None.
+    :rtype: None
+    """
+    parser = get_parser()
+    args = parser.parse_args(
+        ["freeze", "--system", "hcho_nh3", "--add-literature"]
+    )
+    assert args.command == "freeze"
+    assert args.add_literature is True
 
 
 def assert_custom_freeze_args(args: argparse.Namespace) -> None:
@@ -183,6 +202,51 @@ def test_freeze_parser_custom_options() -> None:
     assert_custom_freeze_args(args)
 
 
+def test_sweep_parser_options() -> None:
+    """
+    Verify sweep subcommand parser correctly sets grid flags and defaults.
+
+    :return: None.
+    :rtype: None
+    """
+    cli_str = (
+        "sweep --system hcho_nh3 --kpush-per-atom 0.015,0.02 "
+        "--temperatures 300,600 --groups 2 --first-group 1"
+    )
+    args = get_parser().parse_args(cli_str.split())
+    assert args.command == "sweep" and args.system == "hcho_nh3"
+    assert args.kpush_per_atom == "0.015,0.02"
+    assert args.temperatures == "300,600"
+    assert args.groups == 2 and args.first_group == 1
+    assert args.workers == DEFAULT_WORKERS
+    assert args.data_dir == DEFAULT_DATA_DIR
+
+
+def test_freeze_parser_from_runs_option() -> None:
+    """
+    Verify freeze subcommand parses optional --from-runs directory paths.
+
+    :return: None.
+    :rtype: None
+    """
+    cli_args = ["freeze", "--system", "hcho_nh3", "--from-runs", "d1", "d2"]
+    args = get_parser().parse_args(cli_args)
+    assert args.command == "freeze"
+    assert args.from_runs == ["d1", "d2"]
+
+
+def test_parse_float_list_helper() -> None:
+    """
+    Verify parsing of comma-separated numeric strings into float sequences.
+
+    :return: None.
+    :rtype: None
+    """
+    parsed = parse_float_list("0.015, 0.02, 0.025")
+    assert parsed == [0.015, 0.02, 0.025]
+    assert parse_float_list([1.0, 2.5]) == [1.0, 2.5]
+
+
 def test_refine_parser_defaults() -> None:
     """
     Verify refine subcommand parser assigns expected module defaults.
@@ -203,6 +267,8 @@ def test_refine_parser_defaults() -> None:
     assert args.results_dir == DEFAULT_RESULTS_DIR
     assert args.search == DEFAULT_SEARCH
     assert args.seed_from is None
+    assert args.reactions is None
+    assert args.skip_species is False
 
 
 def assert_custom_refine_args(args: argparse.Namespace) -> None:
@@ -220,6 +286,68 @@ def assert_custom_refine_args(args: argparse.Namespace) -> None:
     assert args.engines == "my_engines.yaml"
     assert args.results_dir == "my_results" and args.search == "my_search.yaml"
     assert args.seed_from is None
+    assert args.reactions is None
+    assert args.skip_species is False
+
+
+def test_refine_parser_reactions_and_skip_species() -> None:
+    """
+    Verify refine subcommand parses reactions and skip-species flags.
+
+    :return: None.
+    :rtype: None
+    """
+    args = get_parser().parse_args(
+        [
+            "refine",
+            "--system",
+            "toy",
+            "--engine",
+            "xtb",
+            "--reactions",
+            "R001",
+            "R002",
+            "--skip-species",
+        ]
+    )
+    assert args.reactions == ["R001", "R002"]
+    assert args.skip_species is True
+
+
+def test_execute_refine_passes_reactions_and_skip_species(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify execute_refine passes reactions and skip_species through.
+
+    :param monkeypatch: Pytest monkeypatch fixture.
+    :type monkeypatch: pytest.MonkeyPatch
+    :return: None.
+    :rtype: None
+    """
+    captured: dict[str, Any] = {}
+
+    def fake_refine(**kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr("nrnet.cli.refine", fake_refine)
+    parser = get_parser()
+    args = parser.parse_args(
+        [
+            "refine",
+            "--system",
+            "toy",
+            "--engine",
+            "xtb",
+            "--reactions",
+            "R001",
+            "R002",
+            "--skip-species",
+        ]
+    )
+    assert args.handler(args) == 0
+    assert captured["reactions"] == ["R001", "R002"]
+    assert captured["skip_species"] is True
 
 
 def test_refine_parser_seed_from() -> None:
@@ -286,13 +414,13 @@ def test_evaluate_parser_defaults() -> None:
             "--reference",
             "xtb",
             "--compare",
-            "aimnet,egret",
+            "aimnet,ani1xnr",
         ]
     )
     assert args.command == "evaluate"
     assert args.system == "toy"
     assert args.reference == "xtb"
-    assert args.compare == "aimnet,egret"
+    assert args.compare == "aimnet,ani1xnr"
     assert args.handler == execute_evaluate
     assert args.results_dir == DEFAULT_RESULTS_DIR
     assert args.search == DEFAULT_SEARCH
@@ -345,16 +473,16 @@ def test_figures_parser_requires_arguments() -> None:
 
 def make_summary_test_files(tmp_path: Path) -> tuple[Path, Path]:
     """
-    Create temporary search and ranks files for summary output test.
+    Create temporary system and ranks files for summary output test.
 
     :param tmp_path: Temporary directory fixture.
     :type tmp_path: Path
-    :return: Tuple of search YAML and ranks JSONL paths.
+    :return: Tuple of system YAML and ranks JSONL paths.
     :rtype: tuple[Path, Path]
     """
-    search_path = tmp_path / "search.yaml"
-    with search_path.open("w", encoding="utf-8") as handle:
-        yaml.safe_dump({"thermo": {"temperatures_k": [298.15]}}, handle)
+    system_path = tmp_path / "system.yaml"
+    with system_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump({"ranking": {"temperatures_k": [298.15]}}, handle)
     ranks_path = tmp_path / "ranks.jsonl"
     row = {
         "temperature_k": 298.15,
@@ -365,7 +493,7 @@ def make_summary_test_files(tmp_path: Path) -> tuple[Path, Path]:
         "path": [],
     }
     write_jsonl(ranks_path, [row])
-    return search_path, ranks_path
+    return system_path, ranks_path
 
 
 def test_print_rank_summary(
@@ -382,8 +510,8 @@ def test_print_rank_summary(
     :return: None.
     :rtype: None
     """
-    search_path, ranks_path = make_summary_test_files(tmp_path)
-    print_rank_summary(ranks_path, search_path)
+    system_path, ranks_path = make_summary_test_files(tmp_path)
+    print_rank_summary(ranks_path, system_path)
     output = capsys.readouterr().out
     assert "298.15 R0 P1 -1.5" in output
     assert "298.15 R1 none" in output
@@ -453,6 +581,7 @@ def setup_slow_test_system(tmp_path: Path) -> tuple[Path, Path, Path]:
         data = yaml.safe_load(handle)
     data["md"]["time_ps"] = 0.5
     data["md"]["replicates"] = 2
+    data["md"]["equilibrate_ps"] = 0.0
     with yaml_file.open("w", encoding="utf-8") as handle:
         yaml.safe_dump(data, handle)
     return sys_dir, runs_dir, cand_dir

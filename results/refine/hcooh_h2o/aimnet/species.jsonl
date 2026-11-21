@@ -1,0 +1,11 @@
+{"key": "CH2O2-2a71d22e", "status": "ok", "energy_ev": -5167.187585134534, "g_ev": {"1000.0": -5169.06093466008}, "multiplicity": 1, "lowest_cm": 491.9473252961334, "force_calls": 39}
+{"key": "CH2O3-e08c66ff", "status": "ok", "energy_ev": -7216.1655927224, "g_ev": {"1000.0": -7218.22678101991}, "multiplicity": 1, "lowest_cm": 406.21389415259233, "force_calls": 48}
+{"key": "CH3O3-f0971681", "status": "ok", "energy_ev": -7230.131445529366, "g_ev": {"1000.0": -7232.1997867152895}, "multiplicity": 2, "lowest_cm": 235.71471331623482, "force_calls": 127}
+{"key": "CH4O3-1b786c83", "status": "ok", "energy_ev": -7248.211890740327, "g_ev": {"1000.0": -7250.005823947137}, "multiplicity": 1, "lowest_cm": 122.07950628509481, "force_calls": 89}
+{"key": "CHO2-063d45b9", "status": "ok", "energy_ev": -5148.471777484719, "g_ev": {"1000.0": -5150.637285394042}, "multiplicity": 2, "lowest_cm": 702.7590735470806, "force_calls": 64}
+{"key": "CHO2-f92468da", "status": "ok", "energy_ev": -5149.0746415041085, "g_ev": {"1000.0": -5151.3027502652}, "multiplicity": 2, "lowest_cm": 344.95080121009397, "force_calls": 32}
+{"key": "CO-72c368ed", "status": "ok", "energy_ev": -3085.7269755648576, "g_ev": {"1000.0": -3087.700162581224}, "multiplicity": 1, "lowest_cm": 2254.7851414258894, "force_calls": 15}
+{"key": "CO2-9d2ea55c", "status": "ok", "energy_ev": -5135.272168524667, "g_ev": {"1000.0": -5137.343773647201}, "multiplicity": 1, "lowest_cm": 702.4229409224833, "force_calls": 22}
+{"key": "H-34ba85c0", "status": "ok", "energy_ev": -13.861757102502452, "g_ev": {"1000.0": -15.094864006090965}, "multiplicity": 2, "lowest_cm": 0.0, "force_calls": 6}
+{"key": "H2-212475fb", "status": "ok", "energy_ev": -31.826678403347557, "g_ev": {"1000.0": -32.99609273554132}, "multiplicity": 1, "lowest_cm": 4889.979312560972, "force_calls": 14}
+{"key": "H2O-2ebfe80f", "status": "ok", "energy_ev": -2081.0398411871383, "g_ev": {"1000.0": -2082.5660877253927}, "multiplicity": 1, "lowest_cm": 1566.223930089654, "force_calls": 22}

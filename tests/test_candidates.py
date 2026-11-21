@@ -8,6 +8,7 @@ and manifest integrity checking.
 
 from collections import Counter
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -23,6 +24,7 @@ from nrnet.nanoreactor.candidates import (
     Candidate,
     EndpointPair,
     Species,
+    build_candidates_from_group,
     build_endpoint_pair,
     compile_candidate_stats,
     group_by_state_pair,
@@ -288,3 +290,33 @@ def test_tampered_manifest_raises(tmp_path: Path) -> None:
     cand_path.write_bytes(content + b" ")
     with pytest.raises(ValueError, match=r"candidates\.json"):
         load_candidates(tmp_path)
+
+
+def test_endo_exo_examples_become_separate_candidates(
+    cis_norbornene_isomers: list[Atoms],
+) -> None:
+    """
+    Verify endo and exo examples from one event group form separate candidates.
+
+    :param cis_norbornene_isomers: Embedded cis norbornene anhydride isomers.
+    :type cis_norbornene_isomers: list[Atoms]
+    :return: None.
+    :rtype: None
+    """
+    endo, exo = cis_norbornene_isomers[0], cis_norbornene_isomers[1]
+    dummy = Atoms("C9H8O3", positions=np.zeros((20, 3)))
+    state_conn = state_key(endo, stereo=False)
+    ev1 = Event(0, 100.0, dummy, dummy, ("reactants",), state_conn)
+    ev2 = Event(0, 200.0, dummy, dummy, ("reactants",), state_conn)
+    pair1 = EndpointPair(0, 100.0, tuple(range(20)), dummy, endo)
+    pair2 = EndpointPair(0, 200.0, tuple(range(20)), dummy, exo)
+    with patch(
+        "nrnet.nanoreactor.candidates.build_endpoint_pair",
+        side_effect=[(pair1, None), (pair2, None)],
+    ):
+        settings = load_engine_settings("configs/engines.yaml", "xtb")
+        cands = build_candidates_from_group([ev1, ev2], settings, Counter(), 1)
+    assert len(cands) == 2
+    assert cands[0].reaction_id == "R001"
+    assert cands[1].reaction_id == "R002"
+    assert cands[0].product_keys != cands[1].product_keys

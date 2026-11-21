@@ -1,0 +1,12 @@
+reaction,main_events,check_events
+C=O + N  <>  NCO,4,3
+C=O + N  <>  [C-]#[O+] + [H][H] + N,2,1
+C=O + N  <>  [H]/[C-]=[O+][H] + N,1,1
+C=O + N  <>  N#CO + [H][H] + [H][H],1,0
+CHO-5e7af12d + H-34ba85c0 + N  <>  [C-]#[O+] + H-34ba85c0 + H-34ba85c0 + N,1,0
+[H]/N=CO + H-34ba85c0 + H-34ba85c0  <>  CH4NO-e9e98c33 + H-34ba85c0,0,1
+C=O + N  <>  [H]/N=CO + [H][H],0,1
+C=O + H-34ba85c0 + H2N-7076b15f  <>  CHO-5e7af12d + H-34ba85c0 + N,1,0
+C=O + N  <>  C=N + O,1,0
+[H]/[C-]=[O+][H] + N  <>  NCO,1,0
+C=O + N  <>  NC=O + [H][H],0,1

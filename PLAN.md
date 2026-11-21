@@ -1,4 +1,6 @@
-# Nanoreactor networks with ML potentials: implementation plan
+# Mechanism Space Explorer: implementation plan
+
+Nanoreactor reaction networks with machine-learned potentials.
 
 Draft of 2026-11-17. Sources: the one-week study plan (nanoreactor.pdf)
 and afscripts' `scripts/xtb_nanoreactor.py` with its helpers.
@@ -11,11 +13,11 @@ nanoreactor predict different products, or a different pathway to them?
 To answer it fairly, the expensive, random part (hot MD that discovers
 reactions) runs once, with xTB. Its output is frozen to disk: the
 molecules it found and the reactions between them. Then each of six
-energy engines (GFN2-xTB, MACE-OMol25, UMA, AIMNet2, Egret-1, DFT) takes
-the same frozen file, re-optimizes every molecule, searches every
-transition state, and computes free energies. Because the input is
-identical, any difference between the six networks comes from the
-engine alone.
+energy engines (GFN2-xTB, MACE-OMol25, UMA, AIMNet2, ANI-1xnr and DFT)
+takes the same frozen file, re-optimizes every molecule, searches
+every transition state, and computes free energies. Because the input is
+identical, any difference between the networks comes from the engine
+alone.
 
 Each engine's network is then ranked five ways (R0 to R4, from a plain
 free-energy filter to a kinetic simulation), and four experiments (E1 to
@@ -98,8 +100,7 @@ check. Publishing still needs your yes (section 10).
   on the Mac). MACE and UMA have pinned different versions of a shared
   library (e3nn) before, so each engine gets its own environment. That
   costs nothing here: each engine already runs as its own command.
-  Egret-1 is a MACE model loaded by `mace-torch`, so it shares MACE's
-  environment.
+  ANI-1xnr has its own environment (uv extra `ani`).
 - **D6. Where things run.** The molecules are small (under ~30 atoms),
   so xTB and all three ML engines run on the Mac's CPU. Only DFT goes to
   the cluster (ORCA). The PDF assumed a GPU; we don't need one.
@@ -116,15 +117,179 @@ check. Publishing still needs your yes (section 10).
   as a limit.
 - **D9. Spin.** All systems are neutral. Multiplicity comes from the
   electron count: even means singlet, odd means doublet. Triplets and
-  open-shell singlets are out of scope and listed as a limit. Egret-1
-  supports only neutral closed-shell molecules. A doublet given to Egret
-  gets status `unsupported` without a call, and its reactions are
-  missing from Egret's network. E2 reports that as a coverage gap, not
-  an accuracy error.
+  open-shell singlets are out of scope and listed as a limit. ANI-1xnr
+  supports only neutral closed-shell molecules (it takes no charge or
+  spin, settings `closed_shell_only`). A doublet given to ANI-1xnr gets
+  status `unsupported` without a call, and its reactions are missing from
+  ANI-1xnr's network. E2 reports that as a coverage gap, not an accuracy
+  error.
 - **D10. Code style.** The AtomField code style:
   snake_case, inline type hints, Sphinx docstrings, 80 characters per
   line, methods of at most 15 lines, no underscore functions. It reads
   like ordinary Python to an outside reader.
+- **D11. A barrierless step keeps its arrow, through the clamp rule**
+  (decided 2026-11-18). Some steps have no saddle on an engine's
+  surface: a bond breaks into two fragments, the band's highest image
+  sits at an end, and Sella finds no single imaginary mode. Dropping
+  them can delete real channels at high temperature. Such a step gets
+  G(TS) = max(G_A, G_B), with both sides measured as in D3 (separated
+  molecules, 1 atm). This is the rule that already clamps a confirmed
+  TS lying below an endpoint, `max(G_raw_TS, G_A, G_B)` in
+  `network.apply_barrier`, with the raw TS term absent. So the uphill
+  direction's barrier is dG_rxn and the downhill one is zero.
+  - Detection: after the climbing stage, no interior image rises more
+    than 0.04 eV (about 1 kcal/mol, a `search.yaml` setting) above the
+    higher endpoint, and both ends still relax to the expected states.
+    The status is `barrierless`, not a failure.
+  - These arrows carry `barrierless: true`. R4 runs twice, with and
+    without them. If the predicted products change, that is a result
+    and gets reported.
+  - Known bias: the products' full translational entropy at 1 atm makes
+    dissociation too fast at high temperature, because a real loose TS
+    has less entropy than fully separated fragments. The bias is the
+    same for every engine, so the comparison stays fair. It is listed
+    in the README's Known limits.
+- **D12. Species identity becomes stereo-aware before system 3.**
+  Connectivity keys (D2) merge stereoisomers. Endo and exo Diels–Alder
+  adducts have one bond graph, and the figure bug where two CH3NO
+  isomers shared one label showed that identity decides what the tables
+  say. Before system 3 runs, a species key becomes formula,
+  connectivity hash and a stereo descriptor. The descriptor comes from
+  the relaxed 3D geometry: the parity of each stereocentre (signed
+  volume of its neighbours, ordered by the Weisfeiler-Lehman labels)
+  and E/Z for each stereogenic double bond. RDKit's InChIKey stays a
+  label and a cross-check. MD events stay connectivity-only, since hot
+  frames have no stable stereo. The descriptor is assigned at freeze,
+  on the xTB-relaxed ends, and every engine's endpoint check compares
+  the full key. Endo and exo then become two candidates with their own
+  TS searches. An achiral species gets an empty descriptor, so frozen
+  sets without stereocentres keep their keys (a test checks this).
+- **D13. Ranking temperatures are set per system.** Each
+  `systems/<name>/system.yaml` names its own ranking temperatures (the
+  temperature of interest from its literature reference, plus one
+  elevated temperature), replacing the single list in `search.yaml`.
+  The MD temperature stays a sampling choice only. The README's Systems
+  table lists them.
+- **D14. Engines are also compared on what all of them can compute.**
+  ANI-1xnr cannot treat radicals (D9), so its network lacks exactly
+  the radical and barrierless steps. E1 and E2 therefore report every
+  engine twice: on its own network, and on the common subset (reactions
+  every engine could compute, states every engine could reach).
+  Differences on the common subset measure accuracy; the rest measures
+  coverage.
+- **D15. Discovery settings come from the literature, then a sweep**
+  (2026-11-18). Zhang, Xu, Lan (JCTC 2023) ran the same HCHO + NH3
+  nanoreactor: bath 300 K, kpush 0.20 and 0.25 Eh, alpha 0.7 bohr^-2,
+  one reference structure replaced every 1 ps, a 4.3 A logfermi wall
+  (xtb defaults, 6000 K and beta 10 bohr^-1), 5-10 ps runs, starts taken
+  from a 500 ps unbiased MD inside the wall. Their sweep found 0%, 0%,
+  12% and 76% reactive runs at kpush 0.10, 0.15, 0.20 and 0.25. Grimme
+  (JCTC 2019) uses kpush about 0.02 x N atoms, alpha 0.6 and a 298 K
+  bath. The pattern: a cool bath, kpush about 0.02-0.03 Eh per atom
+  with a narrow window (none below, fragmentation above), alpha
+  0.6-0.7, the wall sized by density, frames under 10 fs apart, and a
+  second independent group of runs to check convergence.
+  - Defaults in every `system.yaml` follow it; the wall is Zhang's
+    4.3 A scaled by mass at the same density (hcooh 4.3, hcooh_h2o
+    4.8, cpd_ma 6.5 A).
+  - `nrnet sweep` scans kpush per atom (0.015-0.03) and the bath (300,
+    600 K) with two groups of 50 runs each, and writes
+    `data/<system>/md_sweep.csv`: reactive share, radical share,
+    candidates, literature products found (`systems/<id>/literature.yaml`)
+    and group agreement. Pick the lowest kpush where the literature
+    products appear and the groups agree; freeze the union of that and
+    one higher setting.
+  - hcho_nh3 goes first: at Zhang's settings it should reproduce their
+    reactive shares, which validates the whole discovery setup.
+- **D16. Each engine keeps its lowest saddle, not its first**
+  (2026-11-19). A reaction's example pairs can confirm different
+  saddles between the same ends: hcooh decarboxylation gave -2393
+  cm^-1 at dG_act 64.9 kcal/mol from one pair and -310 cm^-1 at 93.6
+  from another (1000 K), which decides whether decarboxylation or
+  dehydration is faster. Every attempt now runs (the seed, when
+  given, then a band on every pair); the record keeps the confirmed
+  saddle with the lowest G at the system's first ranking temperature,
+  and a barrierless attempt only when no pair confirms a saddle. A
+  band reads as barrierless whenever its own product end lies high
+  (hcooh_h2o dehydration: one pair's product end sat 56.6 kcal/mol
+  above its reactant end while another pair confirmed a 74.7 saddle),
+  so the checked saddle wins. `attempt_ts_energy_ev` keeps every
+  confirmed attempt's energy. Seeding no longer saves
+  bands; for DFT a seed-only mode is to be decided with the DFT plan.
+- **D17. Literature reactions match on reacting molecules**
+  (2026-11-19, discovery log F12). Whole states hide whether a water
+  relays a proton or stands by, so the match compares the reacting
+  molecules only.
+- **D18. AIMNet2 runs the spin-aware NSE model** (2026-11-19, discovery
+  log F13). `aimnet2-wb97m-d3_0` is closed-shell: it drops the
+  multiplicity, so every radical was computed as a closed shell (CHO2
+  -> CO2 + H at 1000 K: dG_rxn +6.7 against -33.1 with xTB and -18.8
+  with UMA). `aimnet2-nse_0` reads the multiplicity, keeps AIMNet2 on
+  every reaction (D14's common subset stays large) and gives HCHO within
+  0.03 eV of the old model. All AIMNet2 refines rerun; the closed-shell
+  results are archived.
+- **D19. xTB attempts stop after 20 minutes** (2026-11-19, discovery log
+  7.10). An attempt whose SCF sits near the 1000-cycle cap on every call
+  (cpd_ma R014: 1.55 s per call, 3.1 h for one attempt, then
+  engine_error) held back cpd_ma, and with it the ML engines that wait
+  for xTB's seeds. `attempt_time_limit_s: 1200` in the xtb block of
+  `configs/engines.yaml` ends such an attempt as `time_limit` (SIGALRM,
+  checked between calls, so one SCF always finishes) and the search
+  moves to the next attempt. Other xTB attempts take under a minute.
+  The setting is per engine and off for the ML engines and DFT (ORCA
+  runs as a subprocess, which the alarm would leave running).
+- **D20. DFT is on hold; accuracy comes from reference data** (2026-11-19,
+  user decision). Full DFT refinement would take months on this machine
+  (discovery log 7.9). Engines are judged against tabulated gas-phase
+  thermochemistry (reaction free energies at the ranking temperatures,
+  each value with its source) and published barriers where they exist.
+  Tables give reaction energies, not barriers, so barrier accuracy rests
+  on the literature values alone; cpd_ma is reported as a prediction
+  with an uncertainty band.
+- **D21. Which ML potentials, and why; Egret removed** (2026-11-21, user
+  decision). An engine here must come pretrained (there is no DFT to
+  train on, D20), be trained on gas-phase molecules, have seen stretched
+  bonds near saddles, and ideally take charge and spin. Not used:
+  NequIP and Allegro (architectures; their released foundation models
+  are for crystals, PBE), SpookyNet (no maintained general organic
+  model), CHGNet and M3GNet (inorganic crystals, Materials Project,
+  PBE/PBE+U), ANI-1x, 2x and 1ccx (trained near equilibrium, no charge or
+  spin; AIMNet2 is their successor). Google DeepMind has no released
+  molecular potential (GNoME covers crystals, DM21 is an
+  exchange-correlation functional, FermiNet a wavefunction method).
+  Added: ANI-1xnr as engine `ani1xnr`, trained on nanoreactor-sampled
+  data (BLYP/TZV2P; H, C, N, O), so E1 asks whether reactive training
+  helps. It takes no spin, so it is closed-shell only (D9) and covers 56
+  of the 65 reactions; its lower DFT level is a limit, since it differs
+  from the OMol25 models in data and level at once. Removed: Egret-1 and
+  Egret-1t. They are little used (absent from the 2026 benchmark of ML
+  potentials for transition-state searches by Marks, Vandezande and
+  Gomes), closed-shell only, and slow; Egret-1t found no saddle for
+  hcooh R001 in 3.6 h (discovery log 7.6). Their loaders, settings and
+  tests are gone; partial results and weights are archived outside the
+  repository. Discovery log 7.16.
+- **D22. Duplicates are removed within a system, never across systems,
+  and only from stored results** (2026-11-21, user decision; replaces
+  the 2026-11-19 proposal). A reaction found by two systems stays in
+  both, so no system loses what it discovered. Every unique saddle and
+  species is kept; among duplicates the lowest energy is reported;
+  identity is stereo-aware (enantiomers share a tag); nothing is rerun.
+  One saddle leading to two products is left as found. Check of the
+  stored data (discovery log 7.18): within each system nothing is left
+  to remove. `freeze` already merged the 230 MD events into 65 reactions
+  by their reacting molecules (hcooh 98 -> 4, hcooh_h2o 56 -> 10,
+  hcho_nh3 20 -> 13, cpd_ma 56 -> 38); no two reactions in a system
+  share both sides, in either direction; `refine` stores one saddle per
+  reaction and one geometry per species key. The unique reactions are
+  therefore the refine reaction lists, and DFT validation is chosen
+  from them (next decision). Gap: 14 confirmed saddles more than
+  0.1 kcal/mol from the kept one were stored as energies only (D16 kept
+  the lowest geometry). They are unique by this rule but cannot be
+  listed without a rerun, so they are reported as a count. For a future
+  run that stores every saddle, two saddles are the same when energies
+  differ by at most 0.1 kcal/mol, imaginary frequencies by at most
+  10 cm^-1, and the RMSD is at most 0.1 A after the best overlay that
+  may renumber atoms of one element and may mirror.
 
 ## 4. The pipeline, end to end (example: HCHO + NH3)
 
@@ -141,8 +306,8 @@ replicate, the time, the frame before and the frame after.
 
 **Stage 3, freeze.** Events are grouped by their unordered pair of
 states, so A -> B and B -> A are one candidate reaction. For each
-candidate we keep up to three example pairs (spares for when a TS search
-fails). From each pair we cut out only the reacting molecules: atoms
+candidate we keep up to three example pairs (each is searched; the
+lowest saddle is kept, D16). From each pair we cut out only the reacting molecules: atoms
 whose bonds changed, grown to their whole molecules on both sides. Both
 ends are relaxed with xTB. The candidate is dropped if the two relaxed
 ends turn out to be the same state, or not the states the event named.
@@ -281,12 +446,10 @@ the extension point: adding an engine means one entry, nothing else.
 - xTB here means tblite's ASE calculator (same GFN2 method as the MD).
   If tblite won't install on the Mac, a small ASE calculator around the
   xtb binary (`--grad`) takes its place.
-- Egret-1 loads through `mace-torch`'s `mace_off` calculator, pointed
-  at the downloaded checkpoint (MIT, from Rowan's egret-public
-  repository). Its settings say closed-shell only, and `attach` raises
-  `UnsupportedSpecies` for a doublet (D9).
-  `engines.yaml` names the checkpoint, so Egret-1e (also trained on
-  transition states and reactive structures) is a one-line switch.
+- ANI-1xnr loads through torchani 2.12 `models.ANI1xnr` in float64. Its
+  settings say closed-shell only, and `attach` raises
+  `UnsupportedSpecies` for a doublet (D9). E1 shows whether reactive
+  training helps.
 - DFT means ASE's ORCA calculator at wB97M-V/def2-TZVPD (confirm the
   level on the OMol25 dataset page on Day 0).
 
@@ -316,8 +479,8 @@ the extension point: adding an engine means one entry, nothing else.
 - `confirm_endpoints(ts, mode, expected) -> bool`
 - `search_candidate(candidate, engine, search, seed) -> [TSResult]`:
   with a seed (another engine's confirmed TS), tries the seeded pair
-  first; then tries the example pairs' own bands in order until one is
-  confirmed.
+  first; then runs a band on every example pair. `refine.kept_result`
+  keeps the lowest-G confirmed saddle, else a barrierless attempt (D16).
 
 ### thermo
 
@@ -404,6 +567,20 @@ path. A "product" is any state reachable from the reactant.
 - E3 `ranker_agreement`: top-1 and top-3 agreement of R0 to R3 with R4,
   on the DFT network.
 - E4 `cost`: wall time and CPU hours per network, from the call log.
+- E5 `error_propagation`: how step errors become product errors. Both
+  parts reuse the DFT network and the rankers; no new engine calls.
+  1. Swap: give the DFT network one engine's numbers, one kind at a
+     time: its barriers only, its reaction free energies only, then
+     both, on DFT's arrows. R4 and the E2 metrics for each case show
+     whether an engine's product errors come from barriers,
+     thermodynamics or both.
+  2. Noise budget: add Gaussian noise of 0.5, 1, 2 and 3 kcal/mol to
+     every DFT barrier (200 seeded draws each), rerun R4, and count how
+     often the major product and the top-3 set change. Each engine's
+     E1 MAE placed on that curve says how accurate a potential must be
+     for this network.
+  Checks: zero noise, and swapping in DFT's own numbers, both return
+  DFT's ranking exactly.
 - `figures.py` draws figures 1 to 4 and writes tables 1 to 3 as CSV and
   LaTeX.
 
@@ -452,8 +629,8 @@ by script on 2026-11-17.
 ## 8. Where things run
 
 - **Mac (M5, 10 cores):** xTB MD (Homebrew xtb 6.7.1 is installed),
-  freezing, and refinement with xTB, MACE, UMA, AIMNet2 and Egret-1 on
-  CPU, one uv environment per engine (MACE and Egret share one).
+  freezing, and refinement with xTB, MACE, UMA, AIMNet2 and ANI-1xnr on
+  CPU, one uv environment per engine.
 - **Cluster:** DFT refinement only, with ORCA from its module and a
   Python 3.11 environment with ASE and Sella. The command is the same as
   on the Mac: `nrnet refine --system hcho_nh3 --engine dft`. The Slurm
@@ -508,6 +685,23 @@ AIMNet2, MACE and Egret-1 (seeded from xTB, band fallback). Open: UMA
 (Hugging Face access), the DFT runs, systems 2 and 3, six functions of
 16-19 lines, and a final rerun of every engine from one commit.
 
+Added 2026-11-18, after review:
+
+- S14: D11 barrierless detection, the clamp arrow tagged
+  `barrierless`, R4 with and without. Check: HCO -> CO + H gets status
+  `barrierless` and an arrow at max(G_A, G_B); a toy network with one
+  barrierless arrow.
+- S15: D14 common-subset rows in E1 and E2. Check: a fake results set
+  where one engine lacks a radical step.
+- S16: E5 swap and noise budget. Check: zero noise and a DFT-for-DFT
+  swap reproduce DFT's ranking.
+- S17: D13 ranking temperatures from `system.yaml`. Check: rank and
+  refine read each system's own list.
+- S18: D12 stereo-aware keys, before system 3. Check: endo and exo
+  adducts get different keys; system 1's keys are unchanged.
+- Runs: UMA (uma-s-1p2p1) and Egret-1t on system 1; DFT on the
+  cluster; discover and freeze for systems 2 and 3.
+
 The long runs start as soon as their slice lands: discovery for all three
 systems after S5 (Day 1), xTB and MACE on system 1 after S9 (Day 2), DFT
 for system 1 the same day.
@@ -534,12 +728,65 @@ for system 1 the same day.
    trained on wB97M-D3, and Egret-1 on a wB97M-D3BJ level (confirm on
    its card), so hypothesis 1 ("OMol25-trained potentials match DFT")
    covers MACE and UMA only. AIMNet2 and Egret-1 form the "different
-   training data" group. Both have reaction-aware variants
-   (aimnet2_rxn, Egret-1e) that may suit TS searches better. Each is a
-   one-line switch in `engines.yaml`.
+   training data" group. Both have reaction-trained variants. Egret-1t
+   (trained on transition states) was added on 2026-11-18 as engine
+   `egret_t` and runs beside Egret-1. aimnet2-rxn (registry key
+   `aimnet2-rxn_0`, neutral only, D3 added after the fact) is not added
+   yet.
+   Models were pinned on 2026-11-18: UMA moved to uma-s-1p2p1, which the
+   model card recommends over 1p2. Licenses checked the same day: MACE-OMol
+   is under the Academic Software License (release notes of
+   `mace_omol_0`), UMA under the FAIR Chemistry License v1, the aimnet
+   package under MIT, Egret under MIT. The README lists them.
 5. **Repository license**: MIT unless you prefer another.
 
 ## 11. Risks beyond the PDF's list
+
+The report-ready record of MD runs, checks and fixes, with numbers, is
+`docs/discovery-log.md`.
+
+- **The wall radius was in the wrong unit** (found 2026-11-18). xtb
+  reads `sphere:` in bohr; the code wrote the Angstrom value as is, so
+  the "4 A" wall was 2.12 A (xtb prints the radius it uses). Every run
+  before the fix was squeezed into a ball smaller than one HCHO + NH3
+  pair, which explains why 85-95% of events stripped hydrogens and the
+  concerted literature channels never appeared. Fixed in `wall_block`;
+  all data from before the fix was archived, not used (D15).
+- **H2 was never seen as a molecule** (found 2026-11-18). ASE's covalent
+  radius for H (0.31 A) times 1.2 gives an H-H cutoff of 0.744 A, but
+  GFN2-xTB's H2 bond is 0.777 A. Every H2 formed in MD read as two H
+  atoms: those events were rejected as radical pairs, and CO2 + H2
+  (decarboxylation) could never be recognized. `connectivity_graph`
+  now uses 0.37 A for H (half of H2's bond); other bonds in our
+  molecules are unchanged and system 1's species keys are the same.
+  Trajectories were unaffected, so the sweeps were re-analyzed, not
+  rerun.
+- **One reaction per pair of states.** A candidate is keyed by its two
+  states, so two mechanisms joining the same states (for example
+  decarboxylation with water as a spectator and with water as a relay)
+  are example pairs of one candidate, and refine keeps the first
+  confirmed transition state, not the lowest. Keeping the lowest of
+  several mechanisms is future work.
+- **Hand-built reactions only where the MD missed them** (decided
+  2026-11-18). A literature reaction whose two states the MD already
+  joined only gets `literature_name` on that MD candidate; no
+  hand-built geometry is added. One the MD missed is added as a new
+  candidate with `source=literature`. After the fixes below, the MD
+  found both decarboxylations itself; added by hand: aminomethanol ->
+  CH2=NH + H2O (hcho_nh3) and the endo and exo Diels-Alder adducts
+  (cpd_ma; the MD made only a [2+2] adduct).
+- **xtb keeps integrating after a failed MD step** (found 2026-11-18).
+  xtb 6.7.1 sometimes fails an energy evaluation inside the MD (the
+  same geometry converges as a single point) and carries on, writing
+  energy 0 and zero forces from then on. The atoms fly apart in
+  straight lines, which the event finder read as the box atomizing:
+  the commonest rejected event in hcho_nh3. `read_trajectory` now cuts
+  each trajectory at its first zero-energy frame, and the sweep table
+  counts such runs (`xtb_failed_replicates`). The share rises steeply
+  with the push: at 300 K, 0.03 and 0.035 Eh per atom, 15% and 62% of
+  hcho_nh3 runs (94% and 71% of sampling kept), 9% and 19% for hcooh,
+  5% and 34% for hcooh_h2o; cpd_ma 0% at 0.01, 52% at 0.02, 78-96% at
+  0.025-0.04. Trajectories were kept and re-analyzed, not rerun.
 
 - **The wall and metadynamics settings decide what gets found.** Too
   gentle, and nothing reacts in 8 replicates. Too hard, and everything
@@ -615,7 +862,29 @@ for system 1 the same day.
 - **Barrierless steps have no saddle.** HCO -> CO + H (a bond breaking
   into two radicals) has its band maximum at the product end. The
   first run "confirmed" a flat -71 cm^-1 saddle there, which was noise;
-  the second correctly finds none (`wrong_imaginary_count`). Open:
-  give such steps the clamp TS = max(G_a, G_b) (D3's rule) instead of
-  dropping them. That needs a reliable "maximum at the end" test, and
-  it would apply to every engine alike.
+  the second correctly finds none (`wrong_imaginary_count`). Decided
+  on 2026-11-18: such steps get the clamp rule, D11 (slice S14).
+- **The MD misses reactions that need a set approach or come second**
+  (2026-11-18). From HCHO + NH3 starts it makes aminomethanol but never
+  dehydrates it (a second step, barrier about 55 kcal/mol, in the same
+  10 ps run). From the stacked cyclopentadiene + maleic anhydride
+  complexes it never makes either Diels-Alder adduct, at any push from
+  0.01 to 0.04 Eh per atom: the RMSD push moves the box away from where
+  it has been, in any direction, not toward a face-to-face approach.
+  These enter as flagged literature reactions and are reported apart
+  from MD discoveries. Later work, agreed with the user: extra runs
+  started from the intermediates (aminomethanol; the endo and exo
+  complexes held closer, or a tighter cpd_ma wall), then keep a
+  flagged reaction only if the MD still misses it.
+- **Endpoints taken at the crossing were often thrown away** (found
+  2026-11-18 by an independent product census: one frame per ps of
+  every run relaxed with GFN2-xTB and its molecules listed). The census
+  found a Diels-Alder adduct in cpd_ma (0.01 Eh per atom, rep_18) that
+  no frozen set held. The event finder had seen it; the check then
+  rejected it, because the "before" frame was the last one before the
+  change, already on the barrier, and relaxed into the adduct
+  (`state_mismatch`). That rejected 18 of 21 cpd_ma events at 0.01.
+  `find_events` now takes each endpoint `min_frames` (50 fs) into its
+  stable run, in that run's own state. Otherwise the census agreed with
+  the frozen sets: what they lacked were radicals and species seen in
+  one run only. Script: the census should become an `nrnet` check.

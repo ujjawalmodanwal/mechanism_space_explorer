@@ -1,0 +1,23 @@
+system,engine,reaction_id,atoms,task,nprocs,maxcore_mb,wall_s,orca_run_s,scf_cycles,energy_eh,n_imag,orca_version,status,note
+hcooh,xtb,R001,5,SP,4,2500,4.507,4.472,12,-189.668524138964,,6.1.1,ok,
+hcooh,xtb,R001,5,SP,8,1500,4.841,4.804,12,-189.668524138964,,6.1.1,ok,
+hcooh,xtb,R001,5,EnGrad,4,2500,7.368,7.33,12,-189.668530038048,,6.1.1,ok,
+hcooh,xtb,R001,5,EnGrad,8,1500,7.659,7.62,12,-189.668530038048,,6.1.1,ok,
+hcooh,xtb,R001,5,Freq,4,2500,0.046,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+hcooh,xtb,R001,5,Freq,8,1500,0.044,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+hcho_nh3,xtb,R004,8,SP,4,2500,6.511,6.474,11,-171.01548062656,,6.1.1,ok,
+hcho_nh3,xtb,R004,8,SP,8,1500,6.28,6.243,11,-171.015480626559,,6.1.1,ok,
+hcho_nh3,xtb,R004,8,EnGrad,4,2500,11.146,11.106,11,-171.015489822704,,6.1.1,ok,
+hcho_nh3,xtb,R004,8,EnGrad,8,1500,9.761,9.723,11,-171.015489822704,,6.1.1,ok,
+hcho_nh3,xtb,R004,8,Freq,4,2500,0.048,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+hcho_nh3,xtb,R004,8,Freq,8,1500,0.047,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+hcooh_h2o,xtb,R008,8,SP,4,2500,9.246,9.208,11,-266.159745052321,,6.1.1,ok,
+hcooh_h2o,xtb,R008,8,SP,8,1500,8.344,8.305,11,-266.159745052323,,6.1.1,ok,
+hcooh_h2o,xtb,R008,8,EnGrad,4,2500,16.028,15.987,11,-266.159757550888,,6.1.1,ok,
+hcooh_h2o,xtb,R008,8,EnGrad,8,1500,13.946,13.905,11,-266.159757550889,,6.1.1,ok,
+hcooh_h2o,xtb,R008,8,Freq,4,2500,0.049,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+hcooh_h2o,xtb,R008,8,Freq,8,1500,0.048,,,,,6.1.1,failed,"[file orca_main/main_input_check.cpp, line 9603]: Error (ORCA_MAIN): ... aborting the run"
+cpd_ma,xtb,R038,20,SP,4,2500,146.499,146.46,14,-573.419258923965,,6.1.1,ok,
+cpd_ma,xtb,R038,20,SP,8,1500,127.585,127.54,14,-573.419258928819,,6.1.1,ok,
+cpd_ma,xtb,R038,20,EnGrad,4,2500,272.938,272.886,13,-573.419333117554,,6.1.1,ok,
+cpd_ma,xtb,R038,20,EnGrad,8,1500,217.819,217.767,13,-573.419333117555,,6.1.1,ok,

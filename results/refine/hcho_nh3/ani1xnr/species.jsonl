@@ -1,0 +1,15 @@
+{"key": "CH2O-021b6208", "status": "ok", "energy_ev": -621.6566532670845, "g_ev": {"298.15": -621.5738469435365, "600.0": -622.3256992814314}, "multiplicity": 1, "lowest_cm": 1109.8729532114467, "force_calls": 32}
+{"key": "CH2O-63452dc2", "status": "imaginary_minimum", "energy_ev": -619.2639619249015, "lowest_cm": -207.84445489235125, "force_calls": 35}
+{"key": "CH3N-109a8232", "status": "ok", "energy_ev": -471.82888291597516, "g_ev": {"298.15": -471.3915497236273, "600.0": -472.1632753000018}, "multiplicity": 1, "lowest_cm": 663.9845934239343, "force_calls": 40}
+{"key": "CH3NO-3bd83c2e", "status": "ok", "energy_ev": -908.5531288279919, "g_ev": {"298.15": -908.0261869627504, "600.0": -908.9193427224837}, "multiplicity": 1, "lowest_cm": 240.85741612925494, "force_calls": 51}
+{"key": "CH3NO-e12e7f58", "status": "ok", "energy_ev": -907.7087078545349, "g_ev": {"298.15": -907.2131617073327, "600.0": -908.1114733439456}, "multiplicity": 1, "lowest_cm": 267.02511807919, "force_calls": 51}
+{"key": "CH4NO-e9e98c33", "status": "unsupported"}
+{"key": "CH5NO-cfd9fd04", "status": "ok", "energy_ev": -940.1722928229119, "g_ev": {"298.15": -939.0688484121721, "600.0": -940.0133918261363}, "multiplicity": 1, "lowest_cm": 245.49760121234746, "force_calls": 69}
+{"key": "CHNO-2ebc5e12", "status": "ok", "energy_ev": -874.9108016573788, "g_ev": {"298.15": -874.9798324284322, "600.0": -875.8055011756179}, "multiplicity": 1, "lowest_cm": 396.8200892003157, "force_calls": 33}
+{"key": "CHO-5e7af12d", "status": "unsupported"}
+{"key": "CO-72c368ed", "status": "ok", "energy_ev": -589.4127294473693, "g_ev": {"298.15": -589.8037911125773, "600.0": -590.4579523461364}, "multiplicity": 1, "lowest_cm": 2092.8710901908044, "force_calls": 15}
+{"key": "H-34ba85c0", "status": "unsupported"}
+{"key": "H2-212475fb", "status": "ok", "energy_ev": -31.771071226523425, "g_ev": {"298.15": -31.8293950855339, "600.0": -32.290591226360974}, "multiplicity": 1, "lowest_cm": 4391.122791984923, "force_calls": 14}
+{"key": "H2N-7076b15f", "status": "unsupported"}
+{"key": "H2O-2ebfe80f", "status": "ok", "energy_ev": -468.343841938226, "g_ev": {"298.15": -468.2868840323751, "600.0": -468.93766766012914}, "multiplicity": 1, "lowest_cm": 1604.9117330803613, "force_calls": 23}
+{"key": "H3N-1414a4ee", "status": "ok", "energy_ev": -318.98150972372184, "g_ev": {"298.15": -318.60107922318633, "600.0": -319.2792919959794}, "multiplicity": 1, "lowest_cm": 913.168880170849, "force_calls": 30}

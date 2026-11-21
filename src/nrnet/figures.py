@@ -1297,6 +1297,7 @@ def make_figures(
     results_dir: str | Path,
     search_path: str | Path,
     figures_dir: str | Path,
+    systems_dir: str | Path = "systems",
 ) -> Path:
     """
     Generate all publication figures and summary tables for a system.
@@ -1315,10 +1316,17 @@ def make_figures(
     :type search_path: str or Path
     :param figures_dir: Destination root directory for figures.
     :type figures_dir: str or Path
+    :param systems_dir: Systems configuration base directory.
+    :type systems_dir: str or Path
     :return: Destination output directory for the system figures.
     :rtype: Path
     """
-    temps = load_thermo_temperatures(search_path)
+    sys_yaml = Path(systems_dir) / system / "system.yaml"
+    if not sys_yaml.is_file():
+        alt = Path(search_path).parent / "system.yaml"
+        if alt.is_file():
+            sys_yaml = alt
+    temps = load_thermo_temperatures(sys_yaml)
     out_dir = Path(figures_dir) / system
     eval_dir = Path(results_dir) / "evaluate" / system
     cset = load_candidates(Path(candidates_dir) / system)

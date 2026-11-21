@@ -1,0 +1,39 @@
+# Replicates alternate between these starts (trans, then cis).
+reactants: [reactant_trans.xyz, reactant_cis.xyz]
+
+md:
+  # Settings follow Zhang, Xu, Lan (2023) for HCHO + NH3 and Grimme (2019);
+  # PLAN.md, section 11. A cool bath: the metadynamics bias does the work.
+  temperature_k: 300
+  # Length of each biased replicate in picoseconds.
+  time_ps: 10
+  # Duration of unbiased pre-equilibration MD inside the wall in picoseconds.
+  equilibrate_ps: 100
+  # Time step; X-H bonds may break, so no SHAKE in the biased runs.
+  step_fs: 0.5
+  # Trajectory frames every 5 fs (event detection wants under 10 fs).
+  dump_fs: 5
+  # Bias height in Hartree per reference structure, about 0.025 x atoms;
+  # nrnet sweep scans this.
+  kpush: 0.125
+  # Gaussian width in bohr^-2 (0.6-0.7 in reactive studies).
+  alp: 0.7
+  # One reference structure, replaced every picosecond.
+  save: 1
+  # Logfermi wall radius in Angstrom (written to xtb in bohr). Sized to
+  # Zhang's 4.3 A for HCHO + NH3, scaled by mass at the same density.
+  wall_radius_ang: 4.3
+  # Independent replicates.
+  replicates: 50
+  # Base integer random seed for replicate starting geometry rattle.
+  base_seed: 17
+  # Standard deviation of atomic rattle in Angstroms for replicate seeding.
+  rattle_ang: 0.05
+  # Process execution timeout in seconds before aborting replicate.
+  timeout_s: 3600
+  # Minimum lifetime in femtoseconds to retain a persistent intermediate.
+  min_lifetime_fs: 50
+
+ranking:
+  # Ranking temperatures for this system (PLAN D13).
+  temperatures_k: [1000.0]

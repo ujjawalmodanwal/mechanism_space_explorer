@@ -1,0 +1,11 @@
+reaction_id,temperature_k,source,literature_name,n_events,reactants,products,status,route,seed_engine,attempts,imaginary_cm,dg_act_fwd_kcal,dg_act_rev_kcal,dg_rxn_kcal,note
+R001,1000.0,md,,10,O=CO,O=C=O + [H][H],confirmed,seed,xtb,confirmed;endpoint_mismatch;endpoint_mismatch;confirmed,-2321.62,67.79,97.72,-29.93,
+R002,1000.0,md,decarboxylation_water_assisted,1,O=CO + O,O=C=O + [H][H] + O,confirmed,band,,confirmed,-1344.29,79.83,109.76,-29.93,
+R003,1000.0,md,,21,O=CO,[C-]#[O+] + O,confirmed,band,,confirmed;confirmed;endpoint_mismatch;confirmed,-1657.96,63.4,90.45,-27.05,
+R004,1000.0,md,,3,O=CO + O,[C-]#[O+] + O + O,confirmed,band,,wrong_imaginary_count;confirmed;wrong_imaginary_count,-1525.93,78.27,105.32,-27.05,
+R005,1000.0,md,,4,CHO2-f92468da,O=C=O + H-34ba85c0,confirmed,seed,xtb,confirmed;confirmed;confirmed;confirmed,-2419.68,27.25,46.37,-19.13,
+R006,1000.0,md,,3,O=CO + O,O=C(O)O + [H][H],wrong_imaginary_count,band,,saddle_not_converged;endpoint_mismatch;wrong_imaginary_count,28.25,,,9.22,
+R007,1000.0,md,,1,CHO2-063d45b9,O=C=O + H-34ba85c0,confirmed,seed,xtb,confirmed;confirmed,-1506.9,,,,
+R008,1000.0,md,,11,O=CO + O,OC(O)O,confirmed,seed,xtb,confirmed;confirmed;wrong_imaginary_count;wrong_imaginary_count,-1701.36,76.71,38.12,38.59,
+R009,1000.0,md,,1,O=C(O)O + H-34ba85c0,CH3O3-f0971681,endpoint_mismatch,band,,endpoint_mismatch,-549.13,,,19.85,
+R010,1000.0,md,,1,O=C(O)O,O=C=O + O,confirmed,seed,xtb,confirmed;confirmed,-1741.76,39.27,78.42,-39.14,

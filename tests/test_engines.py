@@ -7,9 +7,11 @@ validation guards, ML engine loaders, and the ORCA DFT calculator loader.
 """
 
 import os
+import sys
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -21,9 +23,13 @@ from nrnet.engines import (
     EngineSettings,
     UnsupportedSpecies,
     attach,
+    load_aimnet_calculator,
     load_dft_calculator,
     load_engine_settings,
+    load_mace_calculator,
+    load_mace_model,
     orca_command,
+    parse_engine_settings,
 )
 
 
@@ -58,18 +64,23 @@ def assert_energy_and_forces(
 @pytest.mark.parametrize(
     ("name", "model", "closed_shell_only", "extra"),
     [
-        ("xtb", "GFN2-xTB", False, {}),
-        ("mace", "extra_large", False, {}),
-        ("egret", "models/EGRET_1.model", True, {}),
-        ("uma", "uma-s-1p1", False, {}),
-        ("aimnet", "aimnet2", False, {}),
+        (
+            "xtb",
+            "GFN2-xTB",
+            False,
+            {"max_iterations": 1000, "attempt_time_limit_s": 1200},
+        ),
+        ("mace", "extra_large", False, {"enable_cueq": False}),
+        ("uma", "uma-s-1p2p1", False, {"task": "omol"}),
+        ("aimnet", "aimnet2-nse_0", False, {}),
+        ("ani1xnr", "ANI1xnr", True, {}),
         (
             "dft",
             "wB97M-V def2-TZVPD",
             False,
             {
-                "nprocs": 16,
-                "maxcore_mb": 3000,
+                "nprocs": 4,
+                "maxcore_mb": 2500,
                 "scf": "TightSCF",
                 "scratch_dir": "runs/orca",
             },
@@ -136,6 +147,20 @@ def test_attach_hcho_xtb() -> None:
     assert np.isfinite(energy)
     assert forces.shape == (4, 3)
     assert np.all(np.isfinite(forces))
+
+
+def test_xtb_scf_cap_from_config() -> None:
+    """
+    Verify the xTB SCF cycle cap comes from engines.yaml, else tblite's 250.
+
+    :return: None.
+    :rtype: None
+    """
+    settings = load_engine_settings("configs/engines.yaml", "xtb")
+    configured = attach(molecule("H2CO"), settings)
+    assert configured.calc.parameters["max_iterations"] == 1000
+    plain = attach(molecule("H2CO"), replace(settings, extra={}))
+    assert plain.calc.parameters["max_iterations"] == 250
 
 
 def test_attach_closed_shell_only_raises() -> None:
@@ -232,8 +257,8 @@ def test_load_dft_calculator(
     assert calc_singlet.parameters["orcasimpleinput"] == (
         "wB97M-V def2-TZVPD EnGrad TightSCF"
     )
-    assert "%pal nprocs 16 end" in calc_singlet.parameters["orcablocks"]
-    assert "%maxcore 3000" in calc_singlet.parameters["orcablocks"]
+    assert "%pal nprocs 4 end" in calc_singlet.parameters["orcablocks"]
+    assert "%maxcore 2500" in calc_singlet.parameters["orcablocks"]
 
     assert calc_singlet.parameters["charge"] == 0
     assert calc_singlet.parameters["mult"] == 1
@@ -261,22 +286,6 @@ def test_mace_engine() -> None:
     settings = load_engine_settings("configs/engines.yaml", "mace")
     assert_energy_and_forces(molecule("H2CO"), settings, 1)
     assert_energy_and_forces(molecule("CH3"), settings, 2)
-
-
-@pytest.mark.engine
-def test_egret_engine() -> None:
-    """
-    Verify Egret-1 evaluation on HCHO and rejection of CH3 doublet.
-
-    :return: None.
-    :rtype: None
-    """
-    pytest.importorskip("mace")
-    settings = load_engine_settings("configs/engines.yaml", "egret")
-    assert_energy_and_forces(molecule("H2CO"), settings, 1)
-    ch3 = molecule("CH3")
-    with pytest.raises(UnsupportedSpecies):
-        attach(ch3, settings)
 
 
 @pytest.mark.engine
@@ -313,6 +322,42 @@ def test_aimnet_engine() -> None:
 
 
 @pytest.mark.engine
+def test_aimnet_engine_reads_spin() -> None:
+    """
+    Verify AIMNet2 energies depend on the multiplicity (discovery log F13).
+
+    A closed-shell model returns the same O2 energy for singlet and
+    triplet; the triplet must come out lower.
+
+    :return: None.
+    :rtype: None
+    """
+    pytest.importorskip("aimnet")
+    settings = load_engine_settings("configs/engines.yaml", "aimnet")
+    energies = {}
+    for spin in (1, 3):
+        atoms = molecule("O2")
+        atoms.calc = load_aimnet_calculator(settings, spin)
+        energies[spin] = atoms.get_potential_energy()
+    assert energies[3] < energies[1] - 0.5
+
+
+@pytest.mark.engine
+def test_ani1xnr_engine() -> None:
+    """
+    Verify ANI-1xnr on HCHO and rejection of the CH3 doublet.
+
+    :return: None.
+    :rtype: None
+    """
+    pytest.importorskip("torchani")
+    settings = load_engine_settings("configs/engines.yaml", "ani1xnr")
+    assert_energy_and_forces(molecule("H2CO"), settings, 1)
+    with pytest.raises(UnsupportedSpecies):
+        attach(molecule("CH3"), settings)
+
+
+@pytest.mark.engine
 def test_dft_engine_h2(tmp_path: Path) -> None:
     """
     Verify ORCA DFT single-point execution on H2 when NRNET_ORCA is set.
@@ -331,3 +376,72 @@ def test_dft_engine_h2(tmp_path: Path) -> None:
     extra["nprocs"] = 1
     fast_settings = replace(settings, model="HF 3-21G", extra=extra)
     assert_energy_and_forces(molecule("H2"), fast_settings, 1)
+
+
+def test_mace_default_settings_enable_cueq_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify default settings give enable_cueq False and reaches loader.
+
+    :param monkeypatch: Pytest monkeypatch fixture.
+    :type monkeypatch: pytest.MonkeyPatch
+    :return: None.
+    :rtype: None
+    """
+    mock_calc = MagicMock()
+    mock_mace_omol = MagicMock(return_value=mock_calc)
+    mock_module = MagicMock(mace_omol=mock_mace_omol)
+    monkeypatch.setitem(sys.modules, "mace", MagicMock())
+    monkeypatch.setitem(sys.modules, "mace.calculators", mock_module)
+
+    load_mace_model.cache_clear()
+    settings = EngineSettings(name="mace", model="extra_large", device="cpu")
+    assert settings.enable_cueq is False
+    calc = load_mace_calculator(settings, 1)
+    assert calc is mock_calc
+    mock_mace_omol.assert_called_once_with(
+        model="extra_large",
+        device="cpu",
+        default_dtype="float64",
+        enable_cueq=False,
+    )
+    load_mace_model.cache_clear()
+
+
+def test_mace_yaml_true_reaches_loader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify YAML with enable_cueq true reaches the MACE loader call.
+
+    :param monkeypatch: Pytest monkeypatch fixture.
+    :type monkeypatch: pytest.MonkeyPatch
+    :return: None.
+    :rtype: None
+    """
+    mock_calc = MagicMock()
+    mock_mace_omol = MagicMock(return_value=mock_calc)
+    mock_module = MagicMock(mace_omol=mock_mace_omol)
+    monkeypatch.setitem(sys.modules, "mace", MagicMock())
+    monkeypatch.setitem(sys.modules, "mace.calculators", mock_module)
+
+    yaml_block = {
+        "model": "extra_large",
+        "device": "cuda",
+        "enable_cueq": True,
+    }
+    settings = parse_engine_settings("mace", yaml_block)
+    assert settings.enable_cueq is True
+    assert settings.extra["enable_cueq"] is True
+
+    load_mace_model.cache_clear()
+    calc = load_mace_calculator(settings, 1)
+    assert calc is mock_calc
+    mock_mace_omol.assert_called_once_with(
+        model="extra_large",
+        device="cuda",
+        default_dtype="float64",
+        enable_cueq=True,
+    )
+    load_mace_model.cache_clear()

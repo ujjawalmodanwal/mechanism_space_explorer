@@ -1,0 +1,14 @@
+k=0.03: main 4 reactions, check 3, shared 1; check reactions also in main 1/3
+k=0.035: main 6 reactions, check 5, shared 4; check reactions also in main 4/5
+union: main 6, check 6, shared 4; check also in main 4/6
+main reactions seen >=2 times: 5, of which in check 4
+
+reactions (main events / check events):
+  19    5  O=CO + O  <>  [C-]#[O+] + O + O
+   6    5  O=CO + O  <>  O=C=O + [H][H] + O
+   7    4  O=CO + O  <>  OC(O)O
+   3    1  CHO2-f92468da + H-34ba85c0 + O  <>  O=C=O + H-34ba85c0 + H-34ba85c0 + O
+   3    0  O=CO + O  <>  O=C(O)O + [H][H]
+   0    1  CHO2-063d45b9 + H-34ba85c0 + O  <>  O=C=O + H-34ba85c0 + H-34ba85c0 + O
+   1    0  O=C(O)O + H-34ba85c0 + H-34ba85c0  <>  CH3O3-f0971681 + H-34ba85c0
+   0    1  O=C(O)O + [H][H]  <>  O=C=O + [H][H] + O

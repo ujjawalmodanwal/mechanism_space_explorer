@@ -25,9 +25,12 @@ __all__ = [
     "NetworkInputs",
     "assemble_inputs",
     "build_engine_network",
+    "candidate_barrier",
+    "candidate_state_energies",
     "collect_state_energies",
     "confirmed_ts_energy",
     "evaluate_candidates",
+    "is_barrierless_row",
     "reaction_barrier",
     "species_free_energies",
     "state_free_energy",
@@ -135,6 +138,67 @@ def confirmed_ts_energy(
     return float(row["g_ts_ev"][label])
 
 
+def is_barrierless_row(row: Mapping[str, Any] | None) -> bool:
+    """
+    Check whether reaction search record indicates a barrierless step.
+
+    :param row: Deserialized transition state record dictionary, or None.
+    :type row: Mapping[str, Any] or None
+    :return: True if row status is barrierless, else False.
+    :rtype: bool
+    """
+    return row is not None and row.get("status") == TSStatus.barrierless.value
+
+
+def candidate_state_energies(
+    candidate: Candidate,
+    species_g: Mapping[str, float],
+) -> tuple[float, float, float] | None:
+    """
+    Extract free energies for candidate reactant, state_a, and state_b.
+
+    :param candidate: Candidate reaction to evaluate.
+    :type candidate: Candidate
+    :param species_g: Mapping of species keys to free energies in eV.
+    :type species_g: Mapping[str, float]
+    :return: Tuple of (g_react, g_a, g_b) or None if any species is missing.
+    :rtype: tuple[float, float, float] or None
+    """
+    g_react = state_free_energy(candidate.reactant_keys, species_g)
+    g_a = state_free_energy(candidate.state_a, species_g)
+    g_b = state_free_energy(candidate.state_b, species_g)
+    if g_react is None or g_a is None or g_b is None:
+        return None
+    return g_react, g_a, g_b
+
+
+def candidate_barrier(
+    candidate: Candidate,
+    dg_act_ev: float,
+    barrierless: bool,
+) -> ReactionBarrier:
+    """
+    Construct ReactionBarrier for a candidate reaction.
+
+    :param candidate: Candidate reaction.
+    :type candidate: Candidate
+    :param dg_act_ev: Forward activation barrier in eV.
+    :type dg_act_ev: float
+    :param barrierless: Whether reaction is barrierless.
+    :type barrierless: bool
+    :return: Constructed ReactionBarrier instance.
+    :rtype: ReactionBarrier
+    """
+    return ReactionBarrier(
+        state_id(candidate.state_a),
+        state_id(candidate.state_b),
+        dg_act_ev,
+        barrierless=barrierless,
+        source=candidate.source,
+        literature_name=candidate.literature_name,
+    )
+
+
 def reaction_barrier(
     candidate: Candidate,
     row: Mapping[str, Any] | None,
@@ -155,20 +219,16 @@ def reaction_barrier(
     :return: Tuple of ReactionBarrier (or None) and drop reason (or None).
     :rtype: tuple[ReactionBarrier or None, str or None]
     """
+    is_barr = is_barrierless_row(row)
     label = temperature_label(temperature_k)
     ts_energy = confirmed_ts_energy(row, label)
-    if ts_energy is None:
+    if not is_barr and ts_energy is None:
         return None, DROP_NO_TS
-    g_react = state_free_energy(candidate.reactant_keys, species_g)
-    g_a = state_free_energy(candidate.state_a, species_g)
-    g_b = state_free_energy(candidate.state_b, species_g)
-    if g_react is None or g_a is None or g_b is None:
+    energies = candidate_state_energies(candidate, species_g)
+    if energies is None:
         return None, DROP_SPECIES_NOT_OK
-    barrier = ReactionBarrier(
-        state_id(candidate.state_a),
-        state_id(candidate.state_b),
-        ts_energy - g_react,
-    )
+    dg_act_ev = 0.0 if ts_energy is None else (ts_energy - energies[0])
+    barrier = candidate_barrier(candidate, dg_act_ev, is_barr)
     return barrier, None
 
 

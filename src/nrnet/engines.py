@@ -30,9 +30,9 @@ __all__ = [
     "get_engine_loader",
     "load_aimnet_base_calculator",
     "load_aimnet_calculator",
+    "load_ani_calculator",
+    "load_ani_model",
     "load_dft_calculator",
-    "load_egret_calculator",
-    "load_egret_model",
     "load_engine_settings",
     "load_mace_calculator",
     "load_mace_model",
@@ -61,14 +61,24 @@ class EngineSettings:
     :param closed_shell_only: Whether the engine only supports singlets.
     :type closed_shell_only: bool
     :param extra: Additional engine-specific configuration parameters.
-    :type extra: Mapping[str, str | int | float]
+    :type extra: Mapping[str, str | int | float | bool]
     """
 
     name: str
     model: str
     device: str
     closed_shell_only: bool = False
-    extra: Mapping[str, str | int | float] = field(default_factory=dict)
+    extra: Mapping[str, str | int | float | bool] = field(default_factory=dict)
+
+    @property
+    def enable_cueq(self) -> bool:
+        """
+        Whether cuEquivariance GPU acceleration kernels are enabled.
+
+        :return: True if cuEquivariance is enabled, False otherwise.
+        :rtype: bool
+        """
+        return bool(self.extra.get("enable_cueq", False))
 
 
 class UnsupportedSpecies(ValueError):
@@ -98,12 +108,17 @@ def load_xtb_calculator(
         method=settings.model,
         charge=0,
         multiplicity=multiplicity,
+        max_iterations=int(settings.extra.get("max_iterations", 250)),
         verbosity=0,
     )
 
 
 @functools.cache
-def load_mace_model(model: str, device: str) -> Calculator:
+def load_mace_model(
+    model: str,
+    device: str,
+    enable_cueq: bool = False,
+) -> Calculator:
     """
     Load and cache a MACE-OMol model instance.
 
@@ -111,13 +126,20 @@ def load_mace_model(model: str, device: str) -> Calculator:
     :type model: str
     :param device: Execution device ('cpu' or 'cuda').
     :type device: str
+    :param enable_cueq: Whether to enable cuEquivariance GPU acceleration.
+    :type enable_cueq: bool
     :return: MACE ASE calculator instance.
     :rtype: Calculator
     """
     # Each engine lives in its own environment (PLAN D5).
     from mace.calculators import mace_omol
 
-    return mace_omol(model=model, device=device, default_dtype="float64")
+    return mace_omol(
+        model=model,
+        device=device,
+        default_dtype="float64",
+        enable_cueq=enable_cueq,
+    )
 
 
 def load_mace_calculator(
@@ -134,42 +156,9 @@ def load_mace_calculator(
     :return: Configured MACE ASE calculator instance.
     :rtype: Calculator
     """
-    return load_mace_model(settings.model, settings.device)
-
-
-@functools.cache
-def load_egret_model(model: str, device: str) -> Calculator:
-    """
-    Load and cache a Rowan Egret-1 model instance.
-
-    :param model: Path to Egret checkpoint model file.
-    :type model: str
-    :param device: Execution device ('cpu' or 'cuda').
-    :type device: str
-    :return: Egret ASE calculator instance.
-    :rtype: Calculator
-    """
-    # Each engine lives in its own environment (PLAN D5).
-    from mace.calculators import mace_off
-
-    return mace_off(model=model, device=device, default_dtype="float64")
-
-
-def load_egret_calculator(
-    settings: EngineSettings,
-    multiplicity: int,
-) -> Calculator:
-    """
-    Instantiate a Rowan Egret-1 ASE calculator.
-
-    :param settings: Engine configuration settings.
-    :type settings: EngineSettings
-    :param multiplicity: Spin multiplicity (2S + 1).
-    :type multiplicity: int
-    :return: Configured Egret ASE calculator instance.
-    :rtype: Calculator
-    """
-    return load_egret_model(settings.model, settings.device)
+    return load_mace_model(
+        settings.model, settings.device, enable_cueq=settings.enable_cueq
+    )
 
 
 @functools.cache
@@ -208,7 +197,7 @@ def load_uma_calculator(
     from fairchem.core import FAIRChemCalculator
 
     predict_unit = load_uma_predict_unit(settings.model, settings.device)
-    return FAIRChemCalculator(predict_unit, task_name="omol")
+    return FAIRChemCalculator(predict_unit, task_name=settings.extra["task"])
 
 
 @functools.cache
@@ -248,6 +237,45 @@ def load_aimnet_calculator(
 
     base_calc = load_aimnet_base_calculator(settings.model, settings.device)
     return AIMNet2ASE(base_calc, charge=0, mult=multiplicity)
+
+
+@functools.cache
+def load_ani_model(model: str, device: str) -> object:
+    """
+    Load and cache a TorchANI model in double precision.
+
+    :param model: Model name in ``torchani.models`` (e.g. 'ANI1xnr').
+    :type model: str
+    :param device: Execution device ('cpu' or 'cuda').
+    :type device: str
+    :return: TorchANI model instance.
+    :rtype: object
+    """
+    # Each engine lives in its own environment (PLAN D5).
+    import torch
+    import torchani
+
+    builder = getattr(torchani.models, model)
+    return builder(device=device, dtype=torch.float64)
+
+
+def load_ani_calculator(
+    settings: EngineSettings,
+    multiplicity: int,
+) -> Calculator:
+    """
+    Instantiate a TorchANI ASE calculator.
+
+    ANI models take no charge or spin, so the engine is closed-shell only.
+
+    :param settings: Engine configuration settings.
+    :type settings: EngineSettings
+    :param multiplicity: Spin multiplicity (2S + 1).
+    :type multiplicity: int
+    :return: Configured TorchANI ASE calculator.
+    :rtype: Calculator
+    """
+    return load_ani_model(settings.model, settings.device).ase()
 
 
 ORCA_COMMAND_ENV = "NRNET_ORCA"
@@ -339,9 +367,9 @@ EngineLoader = Callable[[EngineSettings, int], Calculator]
 ENGINE_LOADERS: dict[str, EngineLoader] = {
     "xtb": load_xtb_calculator,
     "mace": load_mace_calculator,
-    "egret": load_egret_calculator,
     "uma": load_uma_calculator,
     "aimnet": load_aimnet_calculator,
+    "ani1xnr": load_ani_calculator,
     "dft": load_dft_calculator,
 }
 
@@ -379,9 +407,11 @@ def parse_engine_settings(
     :rtype: EngineSettings
     """
     raw_extra = entry.get("extra")
-    extra_data: dict[str, str | int | float] = (
+    extra_data: dict[str, str | int | float | bool] = (
         dict(raw_extra) if isinstance(raw_extra, Mapping) else {}
     )
+    if "enable_cueq" in entry:
+        extra_data["enable_cueq"] = bool(entry["enable_cueq"])
     return EngineSettings(
         name=name,
         model=str(entry["model"]),

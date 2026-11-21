@@ -7,6 +7,7 @@ state searches, signature deduplication, and restart idempotency.
 """
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,9 @@ import ase.io
 import pytest
 from ase import Atoms
 
+import nrnet.refine as refine_mod
 from nrnet.chem import state_key
+from nrnet.engines import EngineSettings
 from nrnet.nanoreactor.candidate_store import write_candidate_files
 from nrnet.nanoreactor.candidates import (
     Candidate,
@@ -22,8 +25,17 @@ from nrnet.nanoreactor.candidates import (
     EndpointPair,
     Species,
 )
-from nrnet.records import read_calls
-from nrnet.refine import load_seeds, refine
+from nrnet.records import RunContext, read_calls
+from nrnet.refine import (
+    RefineJob,
+    kept_result,
+    load_seeds,
+    read_reaction_records,
+    refine,
+    select_candidates,
+)
+from nrnet.store import RefinePaths, append_jsonl, latest_rows, write_jsonl
+from nrnet.ts_search import SearchSettings, TSResult, TSStatus
 
 
 def build_h2co_geometry() -> Atoms:
@@ -140,7 +152,10 @@ def setup_refine_test_system(tmp_path: Path) -> CandidateSet:
     write_candidate_files(cset, cand_dir)
     sys_dir = tmp_path / "systems" / "test_sys"
     sys_dir.mkdir(parents=True, exist_ok=True)
-    (sys_dir / "system.yaml").write_text("name: test_sys\n", encoding="utf-8")
+    sys_content = (
+        "name: test_sys\nranking:\n  temperatures_k: [298.15, 600.0]\n"
+    )
+    (sys_dir / "system.yaml").write_text(sys_content, encoding="utf-8")
     return cset
 
 
@@ -381,3 +396,392 @@ def test_load_seeds_fake_files(tmp_path: Path) -> None:
     assert seeds["R001"].pair_index == 3
     assert seeds["R001"].engine == "fake_eng"
     assert seeds["R001"].atoms.calc is None
+
+
+def make_dummy_refine_paths(
+    tmp_path: Path,
+    reactions_path: Path,
+) -> RefinePaths:
+    """
+    Construct dummy RefinePaths for refinement testing.
+
+    :param tmp_path: Temporary filesystem path.
+    :type tmp_path: Path
+    :param reactions_path: Path to reactions JSONL.
+    :type reactions_path: Path
+    :return: Dummy RefinePaths instance.
+    :rtype: RefinePaths
+    """
+    return RefinePaths(
+        tmp_path,
+        tmp_path / "s.jsonl",
+        tmp_path / "s.extxyz",
+        reactions_path,
+        tmp_path / "ts.extxyz",
+        tmp_path / "c.csv",
+    )
+
+
+def make_dummy_search_settings() -> SearchSettings:
+    """
+    Construct minimal SearchSettings for refinement testing.
+
+    :return: Populated SearchSettings instance.
+    :rtype: SearchSettings
+    """
+    return SearchSettings(0.01, 10, 13, 0.5, 10, 0.05, 10, 0.01, 10, -50.0, 0.1)
+
+
+def make_dummy_refine_job(
+    tmp_path: Path,
+    reactions_path: Path,
+    retry: Sequence[str] = (),
+    reaction_ids: Sequence[str] | None = None,
+    skip_species: bool = False,
+    candidate_set: CandidateSet | None = None,
+) -> RefineJob:
+    """
+    Construct minimal RefineJob instance for stage tests.
+
+    :param tmp_path: Temporary filesystem path.
+    :type tmp_path: Path
+    :param reactions_path: Path to reactions JSONL.
+    :type reactions_path: Path
+    :param retry: Status strings to retry.
+    :type retry: Sequence[str]
+    :param reaction_ids: Optional subset of reaction IDs to refine.
+    :type reaction_ids: Sequence[str] or None
+    :param skip_species: Whether to skip refining frozen species minimums.
+    :type skip_species: bool
+    :param candidate_set: Optional CandidateSet override.
+    :type candidate_set: CandidateSet or None
+    :return: Populated RefineJob dataclass.
+    :rtype: RefineJob
+    """
+    paths = make_dummy_refine_paths(tmp_path, reactions_path)
+    s_set = make_dummy_search_settings()
+    e_set = EngineSettings("xtb", "", "")
+    default_cset = CandidateSet(
+        Species("A", Atoms("H"), "", None, 1), (), (), {}
+    )
+    c_set = candidate_set if candidate_set is not None else default_cset
+    ctx = RunContext(
+        tmp_path / "c.csv", "xtb", "test", "cpu", "hash", "commit"
+    )
+    rxn_ids = tuple(reaction_ids) if reaction_ids is not None else None
+    return RefineJob(
+        paths,
+        c_set,
+        e_set,
+        s_set,
+        (298.15,),
+        ctx,
+        {},
+        tuple(retry),
+        rxn_ids,
+        skip_species,
+    )
+
+
+def sample_retry_reaction_rows() -> list[dict[str, Any]]:
+    """
+    Construct sample reaction records with varying status for retry tests.
+
+    :return: List of reaction record dictionaries.
+    :rtype: list[dict[str, Any]]
+    """
+    return [
+        {"reaction_id": "R001", "status": "wrong_imaginary_count"},
+        {"reaction_id": "R002", "status": "saddle_not_converged"},
+        {
+            "reaction_id": "R003",
+            "status": "confirmed",
+            "signature": [["A"], ["B"]],
+        },
+    ]
+
+
+def test_retry_selects_only_named_statuses(tmp_path: Path) -> None:
+    """
+    Verify --retry selects only reactions with named statuses for searching.
+
+    :param tmp_path: Temporary filesystem fixture.
+    :type tmp_path: Path
+    :return: None.
+    :rtype: None
+    """
+    rxn_path = tmp_path / "reactions.jsonl"
+    write_jsonl(rxn_path, sample_retry_reaction_rows())
+    done_ids, _ = read_reaction_records(
+        rxn_path, retry=("wrong_imaginary_count",)
+    )
+    assert "R001" not in done_ids
+    assert "R002" in done_ids
+    assert "R003" in done_ids
+
+
+def fake_barrierless_search(
+    candidate: Candidate,
+    job: Any,
+) -> dict[str, Any]:
+    """
+    Simulate reaction search returning a barrierless result appended to disk.
+
+    :param candidate: Candidate reaction.
+    :type candidate: Candidate
+    :param job: Active refinement job instance.
+    :type job: Any
+    :return: Appended record dictionary.
+    :rtype: dict[str, Any]
+    """
+    row = {"reaction_id": candidate.reaction_id, "status": "barrierless"}
+    append_jsonl(job.paths.reactions_jsonl, row)
+    return row
+
+
+def test_retry_appends_and_wins_in_latest_rows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    Verify retried candidate appends new row that wins in latest_rows.
+
+    :param monkeypatch: Pytest monkeypatch fixture.
+    :type monkeypatch: pytest.MonkeyPatch
+    :param tmp_path: Temporary filesystem fixture.
+    :type tmp_path: Path
+    :return: None.
+    :rtype: None
+    """
+    rxn_path = tmp_path / "reactions.jsonl"
+    write_jsonl(rxn_path, [{"reaction_id": "R001", "status": "failed"}])
+    cand = Candidate("R001", ("A",), ("B",), ("A",), ("B",), (), "", 1, 0.0)
+    done_ids, conf = read_reaction_records(rxn_path, retry=("failed",))
+    monkeypatch.setattr(
+        refine_mod, "execute_reaction_search", fake_barrierless_search
+    )
+    job = make_dummy_refine_job(tmp_path, rxn_path, retry=("failed",))
+    refine_mod.refine_reaction_stage([cand], done_ids, conf, job)
+    latest = latest_rows(rxn_path, "reaction_id")["R001"]
+    assert latest["status"] == "barrierless"
+
+
+def build_saddle_result(energy_ev: float, pair_index: int) -> TSResult:
+    """
+    Construct a confirmed water-shaped saddle with a given energy.
+
+    :param energy_ev: Electronic energy of the saddle in eV.
+    :type energy_ev: float
+    :param pair_index: Index of the pair the saddle came from.
+    :type pair_index: int
+    :return: Confirmed TS result with geometry and frequencies.
+    :rtype: TSResult
+    """
+    atoms = Atoms(
+        "OH2", positions=[(0.0, 0.0, 0.0), (0.96, 0.0, 0.0), (-0.24, 0.93, 0.0)]
+    )
+    return TSResult(
+        TSStatus.confirmed,
+        pair_index,
+        ts_atoms=atoms,
+        ts_energy_ev=energy_ev,
+        vibrational_cm=(1600.0, 3700.0),
+    )
+
+
+def test_kept_result_takes_lowest_saddle() -> None:
+    """
+    Verify the confirmed saddle with the lowest G is kept, not the first.
+
+    :return: None.
+    :rtype: None
+    """
+    results = [
+        build_saddle_result(-10.0, 0),
+        TSResult(TSStatus.endpoint_mismatch, 1),
+        build_saddle_result(-12.0, 2),
+    ]
+    assert kept_result(results, 298.15).pair_index == 2
+
+
+def test_kept_result_prefers_saddle_to_barrierless() -> None:
+    """
+    Verify a confirmed saddle is kept over a barrierless band.
+
+    :return: None.
+    :rtype: None
+    """
+    results = [
+        TSResult(TSStatus.barrierless, 0),
+        build_saddle_result(-12.0, 1),
+    ]
+    assert kept_result(results, 298.15).status == TSStatus.confirmed
+
+
+def test_kept_result_barrierless_beats_failures() -> None:
+    """
+    Verify a barrierless attempt is kept when no saddle is confirmed.
+
+    :return: None.
+    :rtype: None
+    """
+    results = [
+        TSResult(TSStatus.barrierless, 0),
+        TSResult(TSStatus.endpoint_mismatch, 1),
+    ]
+    assert kept_result(results, 298.15).status == TSStatus.barrierless
+
+
+def test_kept_result_without_saddle_takes_last() -> None:
+    """
+    Verify the last attempt is kept when none is confirmed.
+
+    :return: None.
+    :rtype: None
+    """
+    results = [
+        TSResult(TSStatus.engine_error, 0),
+        TSResult(TSStatus.wrong_imaginary_count, 1),
+    ]
+    assert kept_result(results, 298.15).status == (
+        TSStatus.wrong_imaginary_count
+    )
+
+
+def make_sample_candidates() -> tuple[Candidate, ...]:
+    """
+    Construct sample candidates tuple with unique reaction IDs.
+
+    :return: Tuple of candidate reaction dataclasses.
+    :rtype: tuple[Candidate, ...]
+    """
+    h2co, hcoh = build_h2co_geometry(), build_hcoh_geometry()
+    key_r, key_p = state_key(h2co)[0], state_key(hcoh)[0]
+    pair = EndpointPair(0, 100.0, (0, 1, 2, 3), h2co, hcoh)
+    cand_1 = build_test_candidate("R001", key_r, key_p, pair, 100.0)
+    cand_2 = build_test_candidate("R002", key_r, key_p, pair, 200.0)
+    cand_3 = build_test_candidate("R003", key_r, key_p, pair, 300.0)
+    return cand_1, cand_2, cand_3
+
+
+def test_select_candidates_keeps_order_and_filters() -> None:
+    """
+    Verify select_candidates filters by reaction ID in frozen order.
+
+    :return: None.
+    :rtype: None
+    """
+    candidates = make_sample_candidates()
+    selected = select_candidates(candidates, ["R003", "R001"])
+    assert [cand.reaction_id for cand in selected] == ["R001", "R003"]
+    single = select_candidates(candidates, ["R002"])
+    assert [cand.reaction_id for cand in single] == ["R002"]
+
+
+def test_select_candidates_none_keeps_all() -> None:
+    """
+    Verify select_candidates returns all candidates when reaction_ids is None.
+
+    :return: None.
+    :rtype: None
+    """
+    candidates = make_sample_candidates()
+    assert select_candidates(candidates, None) == list(candidates)
+
+
+def test_select_candidates_unknown_id_raises() -> None:
+    """
+    Verify select_candidates raises ValueError naming missing reaction IDs.
+
+    :return: None.
+    :rtype: None
+    """
+    candidates = make_sample_candidates()
+    with pytest.raises(ValueError) as exc_info:
+        select_candidates(candidates, ["R001", "R999"])
+    assert "R999" in str(exc_info.value)
+
+    with pytest.raises(ValueError) as exc_multi:
+        select_candidates(candidates, ["R998", "R999"])
+    assert "R998" in str(exc_multi.value)
+    assert "R999" in str(exc_multi.value)
+
+
+def test_build_refine_job_validates_early_on_unknown_id(
+    tmp_path: Path,
+) -> None:
+    """
+    Verify build_refine_job validates reactions early before engine setup.
+
+    :param tmp_path: Temporary filesystem fixture.
+    :type tmp_path: Path
+    :return: None.
+    :rtype: None
+    """
+    setup_refine_test_system(tmp_path)
+    with pytest.raises(ValueError) as exc_info:
+        refine_mod.build_refine_job(
+            system="test_sys",
+            engine="xtb",
+            systems_dir=tmp_path / "systems",
+            candidates_dir=tmp_path / "candidates",
+            results_dir=tmp_path / "results",
+            engines_path="configs/engines.yaml",
+            search_path="configs/search.yaml",
+            reactions=["R999"],
+        )
+    assert "R999" in str(exc_info.value)
+
+
+def test_run_refine_stages_skip_species_and_filter(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    Verify run_refine_stages skips species stage and filters reactions.
+
+    :param monkeypatch: Pytest monkeypatch fixture.
+    :type monkeypatch: pytest.MonkeyPatch
+    :param tmp_path: Temporary filesystem fixture.
+    :type tmp_path: Path
+    :return: None.
+    :rtype: None
+    """
+    species_called: list[bool] = []
+    passed_candidates: list[list[Candidate]] = []
+
+    def fake_species_stage(
+        species_map: Any,
+        existing_keys: Any,
+        job: Any,
+    ) -> None:
+        species_called.append(True)
+
+    def fake_reaction_stage(
+        candidates: Sequence[Candidate],
+        existing_ids: Any,
+        confirmed_by_sig: Any,
+        job: Any,
+    ) -> None:
+        passed_candidates.append(list(candidates))
+
+    monkeypatch.setattr(refine_mod, "refine_species_stage", fake_species_stage)
+    monkeypatch.setattr(
+        refine_mod, "refine_reaction_stage", fake_reaction_stage
+    )
+
+    candidates = make_sample_candidates()
+    c_set = CandidateSet(("dummy",), {}, candidates)
+    rxn_path = tmp_path / "reactions.jsonl"
+    job = make_dummy_refine_job(
+        tmp_path,
+        rxn_path,
+        reaction_ids=("R002",),
+        skip_species=True,
+        candidate_set=c_set,
+    )
+    refine_mod.run_refine_stages(job)
+
+    assert not species_called
+    assert len(passed_candidates) == 1
+    assert [cand.reaction_id for cand in passed_candidates[0]] == ["R002"]

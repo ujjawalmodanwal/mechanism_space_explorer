@@ -1,0 +1,10 @@
+k=0.03: main 2 reactions, check 2, shared 2; check reactions also in main 2/2
+k=0.035: main 3 reactions, check 3, shared 2; check reactions also in main 2/3
+union: main 3, check 3, shared 2; check also in main 2/3
+main reactions seen >=2 times: 3, of which in check 2
+
+reactions (main events / check events):
+  44   24  O=CO  <>  O=C=O + [H][H]
+  17    8  O=CO  <>  [C-]#[O+] + O
+   4    0  CHO2-f92468da + H-34ba85c0  <>  O=C=O + H-34ba85c0 + H-34ba85c0
+   0    1  CHO2-063d45b9 + H-34ba85c0  <>  O=C=O + H-34ba85c0 + H-34ba85c0

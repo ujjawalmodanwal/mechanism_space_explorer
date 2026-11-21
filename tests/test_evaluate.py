@@ -607,6 +607,28 @@ def test_network_agreement_hand_checked_tiny_lists() -> None:
     assert agree_diff["kendall_tau"] < 0
 
 
+def test_network_agreement_with_r4_no_barrierless() -> None:
+    """
+    Verify network_agreement reports _no_barrierless metrics when present.
+
+    :return: None.
+    :rtype: None
+    """
+    row = {
+        "temperature_k": 298.15,
+        "position": 1,
+        "state": "P1",
+        "score": 0.5,
+        "path": [],
+    }
+    eng = [{**row, "ranker": "R4"}, {**row, "ranker": "R4_no_barrierless"}]
+    ref = [{**row, "ranker": "R4"}, {**row, "ranker": "R4_no_barrierless"}]
+    agree = network_agreement(eng, ref, 298.15, 0.01)
+    assert agree["jaccard"] == 1.0
+    assert agree["jaccard_no_barrierless"] == 1.0
+    assert agree["same_major_product_no_barrierless"] is True
+
+
 def test_network_agreement_none_cases_empty_inputs() -> None:
     """
     Verify network_agreement returns None values when inputs are empty.
@@ -782,9 +804,13 @@ def test_evaluate_end_to_end(
     toy_cand.mkdir(parents=True, exist_ok=True)
     write_candidate_files(candidates, toy_cand)
 
+    sys_dir = tmp_path / "systems" / "toy"
+    sys_dir.mkdir(parents=True, exist_ok=True)
+    with (sys_dir / "system.yaml").open("w", encoding="utf-8") as handle:
+        yaml.safe_dump({"ranking": {"temperatures_k": [298.15, 600.0]}}, handle)
+
     search_path = tmp_path / "search.yaml"
     search_data = {
-        "thermo": {"temperatures_k": [298.15, 600.0]},
         "rank": {"t_obs_s": 3600.0, "dg_threshold_ev": 0.0},
         "evaluate": {"yield_cutoff": 0.0},
     }
@@ -792,10 +818,18 @@ def test_evaluate_end_to_end(
         yaml.safe_dump(search_data, handle)
 
     rank_candidates(
-        candidates, paths, search_path, make_rank_dir(tmp_path, "toy", "xtb")
+        candidates,
+        paths,
+        search_path,
+        make_rank_dir(tmp_path, "toy", "xtb"),
+        system_yaml=sys_dir / "system.yaml",
     )
     rank_candidates(
-        candidates, paths2, search_path, make_rank_dir(tmp_path, "toy", "xtb2")
+        candidates,
+        paths2,
+        search_path,
+        make_rank_dir(tmp_path, "toy", "xtb2"),
+        system_yaml=sys_dir / "system.yaml",
     )
 
     eval_dir = evaluate(
@@ -805,6 +839,7 @@ def test_evaluate_end_to_end(
         candidates_dir=cand_dir,
         results_dir=tmp_path,
         search_path=search_path,
+        systems_dir=tmp_path / "systems",
     )
 
     assert (eval_dir / "e1_steps.csv").is_file()

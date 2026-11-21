@@ -1,7 +1,0 @@
-engine,temperature_k,jaccard,kendall_tau,major_product,reference_major_product,same_major_product,same_top_path
-aimnet,298.15,,,no_reaction,no_reaction,True,True
-aimnet,600.0,0.0,,no_reaction,CH5NO-cfd9fd04,False,True
-mace,298.15,,,no_reaction,no_reaction,True,True
-mace,600.0,0.0,,no_reaction,CH5NO-cfd9fd04,False,True
-egret,298.15,,,no_reaction,no_reaction,True,True
-egret,600.0,0.0,,no_reaction,CH5NO-cfd9fd04,False,True

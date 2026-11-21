@@ -1,0 +1,32 @@
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R001 pair_index=2 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g4\", 15]" time_fs=8530.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O        2.38394452      -1.34253734      -0.80322383
+C        1.61718286      -0.44644202      -0.82336486
+O        1.19932139       0.63148648      -1.44248766
+H        0.41786493       0.52621899      -0.41522070
+H        0.59361580      -0.27139805       0.20070322
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R003 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g2\", 21]" time_fs=6220.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O       -0.25150423      -0.41920118       0.18878690
+C       -0.86989490       0.66484619      -1.33432837
+O       -0.33194211       0.66159549      -2.35394075
+H        0.31388874       0.17905381       0.71958282
+H       -1.24684224       0.52492548      -0.24953544
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R008 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g6\", 30]" time_fs=4965.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+O        0.16499088       0.51253518       0.78705279
+C        0.71810511       0.37356297      -0.44709039
+O        2.05643758       0.35704054      -0.55627177
+H        0.86958775       0.59797721       1.46058962
+H        0.07695586       0.73782226      -1.26409578
+O        0.78983831      -1.43926604      -1.04736046
+H        0.66257607      -1.98203164      -0.24629719
+H        2.02119163      -0.67930915      -0.87020257
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R010 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.035/g6\", 4]" time_fs=8870.0 atom_ids="0 1 2 3 5 7" side=before pbc="F F F"
+O        0.00378590       0.88299530      -0.49074508
+C        1.55294116       0.32785429      -0.91191038
+O        2.17788718       1.16130570      -0.13569375
+H       -0.39259864       0.24920399       0.14085516
+O        1.70500929      -0.54487629      -1.69608859
+H        1.03522851       1.48593950       0.14447013

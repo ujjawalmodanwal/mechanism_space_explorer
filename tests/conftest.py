@@ -9,6 +9,13 @@ from pathlib import Path
 
 import networkx as nx
 import pytest
+from ase import Atoms
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdMolTransforms
+from rdkit.Chem.EnumerateStereoisomers import (
+    EnumerateStereoisomers,
+    StereoEnumerationOptions,
+)
 
 from nrnet.nanoreactor.candidates import Candidate, CandidateSet
 from nrnet.network import KCAL_MOL_EV, ReactionBarrier, build_network
@@ -171,3 +178,61 @@ def fake_refine_results(
         candidates=candidates,
     )
     return candidate_set, paths
+
+
+def is_cis_anhydride_conformer(mol_h: Chem.Mol) -> bool:
+    """
+    Check if embedded norbornene anhydride conformer has cis anhydride fusion.
+
+    :param mol_h: Embedded molecule with explicit hydrogens.
+    :type mol_h: Chem.Mol
+    :return: True if junction hydrogens are cis (dihedral < 30 degrees).
+    :rtype: bool
+    """
+    conf = mol_h.GetConformer()
+    h5 = next(
+        nbr.GetIdx()
+        for nbr in mol_h.GetAtomWithIdx(5).GetNeighbors()
+        if nbr.GetSymbol() == "H"
+    )
+    h11 = next(
+        nbr.GetIdx()
+        for nbr in mol_h.GetAtomWithIdx(11).GetNeighbors()
+        if nbr.GetSymbol() == "H"
+    )
+    dih = abs(rdMolTransforms.GetDihedralDeg(conf, h5, 5, 11, h11))
+    return bool(dih < 30.0)
+
+
+def find_cis_norbornene_anhydride_isomers() -> list[Atoms]:
+    """
+    Enumerate and embed cis-anhydride stereoisomers of norbornene anhydride.
+
+    :return: List of 3D Atoms instances for cis-anhydride stereoisomers.
+    :rtype: list[Atoms]
+    """
+    smiles = "O=C1OC(=O)C2C3C=CC(C3)C12"
+    mol = Chem.MolFromSmiles(smiles)
+    options = StereoEnumerationOptions(onlyUnassigned=False)
+    isomers = list(EnumerateStereoisomers(mol, options=options))
+    cis_atoms: list[Atoms] = []
+    for iso in isomers:
+        mol_h = Chem.AddHs(iso)
+        if AllChem.EmbedMolecule(mol_h, randomSeed=42) != 0:
+            continue
+        if is_cis_anhydride_conformer(mol_h):
+            pos = mol_h.GetConformer().GetPositions()
+            syms = [atom.GetSymbol() for atom in mol_h.GetAtoms()]
+            cis_atoms.append(Atoms(symbols=syms, positions=pos))
+    return cis_atoms
+
+
+@pytest.fixture
+def cis_norbornene_isomers() -> list[Atoms]:
+    """
+    Fixture providing embedded cis-anhydride stereoisomers of norbornene.
+
+    :return: List of 3D Atoms instances for cis-anhydride stereoisomers.
+    :rtype: list[Atoms]
+    """
+    return find_cis_norbornene_anhydride_isomers()

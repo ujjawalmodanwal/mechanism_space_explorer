@@ -300,9 +300,13 @@ def setup_make_figures_system(
     :return: Tuple of search config path and candidates directory.
     :rtype: tuple[Path, Path]
     """
+    sys_dir = base / "systems" / "toy"
+    sys_dir.mkdir(parents=True, exist_ok=True)
+    with (sys_dir / "system.yaml").open("w", encoding="utf-8") as handle:
+        yaml.safe_dump({"ranking": {"temperatures_k": [298.15, 600.0]}}, handle)
     search_path = base / "search.yaml"
     with search_path.open("w", encoding="utf-8") as handle:
-        yaml.safe_dump({"thermo": {"temperatures_k": [298.15, 600.0]}}, handle)
+        yaml.safe_dump({"search": {}}, handle)
     eval_dir = base / "evaluate" / "toy"
     eval_dir.mkdir(parents=True)
     write_empty_eval_tables(eval_dir)
@@ -355,5 +359,6 @@ def test_make_figures_pipeline(
         results_dir=tmp_path,
         search_path=search_path,
         figures_dir=tmp_path / "figs",
+        systems_dir=tmp_path / "systems",
     )
     assert_figure_outputs(fig_dir)

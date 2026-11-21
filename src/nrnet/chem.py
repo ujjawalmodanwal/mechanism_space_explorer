@@ -5,6 +5,7 @@ Provides pure functions operating on ASE Atoms structures and NetworkX graphs
 to support state representation and reaction extraction in nanoreactor networks.
 """
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -17,6 +18,7 @@ from rdkit.Chem import rdDetermineBonds
 
 __all__ = [
     "DOUBLET",
+    "HYDROGEN_RADIUS_ANG",
     "SINGLET",
     "SpeciesLabels",
     "connectivity_graph",
@@ -26,13 +28,16 @@ __all__ = [
     "radical_count",
     "rdkit_mol",
     "reacting_atoms",
+    "single_bond_stereo_smiles",
     "species_key",
     "species_labels",
     "state_key",
+    "stereo_descriptor",
 ]
 
 SINGLET = 1
 DOUBLET = 2
+HYDROGEN_RADIUS_ANG = 0.37
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +66,12 @@ def connectivity_graph(atoms: Atoms, scale: float = 1.2) -> nx.Graph:
     :return: Connectivity graph with element attributes on each node.
     :rtype: nx.Graph
     """
-    cutoffs = natural_cutoffs(atoms, mult=scale)
+    # H radius 0.37 A (half of H2's bond): ASE's 0.31 A gives an H-H cutoff
+    # of 0.744 A, shorter than H2 itself (0.777 A in GFN2-xTB), so H2 was
+    # read as two H atoms.
+    # ASE uses an override as given, without mult, so scale it here.
+    h_cutoff = HYDROGEN_RADIUS_ANG * scale
+    cutoffs = natural_cutoffs(atoms, mult=scale, H=h_cutoff)
     # skin=0: ASE's default skin widens every cutoff by 0.6 A in total.
     neighbor_list = NeighborList(
         cutoffs,
@@ -92,70 +102,6 @@ def fragments(graph: nx.Graph) -> list[list[int]]:
     components = [sorted(comp) for comp in nx.connected_components(graph)]
     components.sort(key=lambda comp: comp[0])
     return components
-
-
-def species_key(graph: nx.Graph, atom_ids: Sequence[int]) -> str:
-    """
-    Compute canonical species key from Hill formula and WL graph hash.
-
-    :param graph: Molecular connectivity graph.
-    :type graph: nx.Graph
-    :param atom_ids: Atom indices belonging to this species fragment.
-    :type atom_ids: Sequence[int]
-    :return: Canonical species key in formula-hash format.
-    :rtype: str
-    """
-    symbols = "".join(graph.nodes[idx]["element"] for idx in atom_ids)
-    formula = Formula(symbols).format("hill")
-    subgraph = graph.subgraph(atom_ids)
-    graph_hash = nx.weisfeiler_lehman_graph_hash(
-        subgraph,
-        node_attr="element",
-        iterations=3,
-        digest_size=4,
-    )
-    return f"{formula}-{graph_hash}"
-
-
-def state_key(atoms: Atoms, scale: float = 1.2) -> tuple[str, ...]:
-    """
-    Compute canonical state key as a sorted tuple of fragment species keys.
-
-    :param atoms: Full atomic configuration containing all fragments.
-    :type atoms: Atoms
-    :param scale: Multiplicative scale factor for covalent cutoffs.
-    :type scale: float
-    :return: Sorted tuple of fragment species keys.
-    :rtype: tuple[str, ...]
-    """
-    graph = connectivity_graph(atoms, scale=scale)
-    components = fragments(graph)
-    keys = [species_key(graph, frag) for frag in components]
-    return tuple(sorted(keys))
-
-
-def reacting_atoms(
-    graph_before: nx.Graph,
-    graph_after: nx.Graph,
-) -> list[int]:
-    """
-    Identify reacting atoms grown to full molecules across both frames.
-
-    :param graph_before: Connectivity graph of initial frame.
-    :type graph_before: nx.Graph
-    :param graph_after: Connectivity graph of final frame.
-    :type graph_after: nx.Graph
-    :return: Sorted unique indices of atoms participating in reaction.
-    :rtype: list[int]
-    """
-    edges_before = {tuple(sorted(edge)) for edge in graph_before.edges()}
-    edges_after = {tuple(sorted(edge)) for edge in graph_after.edges()}
-    diff_nodes = {node for edge in edges_before ^ edges_after for node in edge}
-    reacting: set[int] = set()
-    for node in diff_nodes:
-        reacting.update(nx.node_connected_component(graph_before, node))
-        reacting.update(nx.node_connected_component(graph_after, node))
-    return sorted(reacting)
 
 
 def atoms_to_xyz(
@@ -208,6 +154,145 @@ def rdkit_mol(
         # Every hydrogen is explicit; RDKit must not add hidden ones.
         atom.SetNoImplicit(True)
     return mol
+
+
+def single_bond_stereo_smiles(atoms: Atoms) -> str:
+    """
+    Generate canonical isomeric SMILES from 3D single-bond connectivity.
+
+    :param atoms: Atomic structure.
+    :type atoms: Atoms
+    :return: Canonical isomeric SMILES with tetrahedral stereo perception.
+    :rtype: str
+    """
+    mol = rdkit_mol(atoms)
+    Chem.SanitizeMol(mol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_PROPERTIES)
+    Chem.AssignStereochemistryFrom3D(mol)
+    return Chem.MolToSmiles(mol)
+
+
+def stereo_descriptor(
+    atoms: Atoms,
+    atom_ids: Sequence[int] | None = None,
+) -> str:
+    """
+    Compute canonical stereo descriptor for tetrahedral stereocenters.
+
+    Builds an RDKit molecule from connectivity with single bonds only,
+    explicit hydrogens, and 3D coordinates. Assigns tetrahedral
+    stereochemistry from the 3D conformer and compares with its mirror
+    image (negated x coordinates) to keep the lexicographically smaller
+    isomeric SMILES, ensuring enantiomers share the same descriptor while
+    diastereomers differ. E/Z stereochemistry around double bonds is out
+    of scope because all bonds are represented as single bonds.
+
+    :param atoms: Atomic configuration.
+    :type atoms: Atoms
+    :param atom_ids: Subset of atom indices belonging to species, or None.
+    :type atom_ids: Sequence[int] or None
+    :return: Descriptor 's' + 8 hex digits, or '' if no tetrahedral stereo.
+    :rtype: str
+    """
+    indices = range(len(atoms)) if atom_ids is None else atom_ids
+    subset = atoms[list(indices)]
+    smi = single_bond_stereo_smiles(subset)
+    mirror = subset.copy()
+    mirror.positions[:, 0] = -mirror.positions[:, 0]
+    mirror_smi = single_bond_stereo_smiles(mirror)
+    chosen = min(smi, mirror_smi)
+    if "@" not in chosen:
+        return ""
+    digest = hashlib.sha256(chosen.encode("utf-8")).hexdigest()[:8]
+    return f"s{digest}"
+
+
+def species_key(
+    graph: nx.Graph,
+    atom_ids: Sequence[int],
+    atoms: Atoms | None = None,
+    stereo: bool = False,
+) -> str:
+    """
+    Compute canonical species key from Hill formula and WL graph hash.
+
+    When stereo is True and atoms is provided, appends the stereo
+    descriptor to the formula-hash key if stereocenters are present.
+
+    :param graph: Molecular connectivity graph.
+    :type graph: nx.Graph
+    :param atom_ids: Atom indices belonging to this species fragment.
+    :type atom_ids: Sequence[int]
+    :param atoms: Atomic structure containing coordinates, or None.
+    :type atoms: Atoms or None
+    :param stereo: Whether to include 3D tetrahedral stereo descriptor.
+    :type stereo: bool
+    :return: Canonical species key in formula-hash[-descriptor] format.
+    :rtype: str
+    """
+    symbols = "".join(graph.nodes[idx]["element"] for idx in atom_ids)
+    formula = Formula(symbols).format("hill")
+    subgraph = graph.subgraph(atom_ids)
+    graph_hash = nx.weisfeiler_lehman_graph_hash(
+        subgraph,
+        node_attr="element",
+        iterations=3,
+        digest_size=4,
+    )
+    base_key = f"{formula}-{graph_hash}"
+    if not stereo or atoms is None:
+        return base_key
+    desc = stereo_descriptor(atoms, atom_ids)
+    return f"{base_key}-{desc}" if desc else base_key
+
+
+def state_key(
+    atoms: Atoms,
+    scale: float = 1.2,
+    stereo: bool = False,
+) -> tuple[str, ...]:
+    """
+    Compute canonical state key as a sorted tuple of fragment species keys.
+
+    :param atoms: Full atomic configuration containing all fragments.
+    :type atoms: Atoms
+    :param scale: Multiplicative scale factor for covalent cutoffs.
+    :type scale: float
+    :param stereo: Whether to include 3D tetrahedral stereo descriptors.
+    :type stereo: bool
+    :return: Sorted tuple of fragment species keys.
+    :rtype: tuple[str, ...]
+    """
+    graph = connectivity_graph(atoms, scale=scale)
+    components = fragments(graph)
+    keys = [
+        species_key(graph, frag, atoms=atoms, stereo=stereo)
+        for frag in components
+    ]
+    return tuple(sorted(keys))
+
+
+def reacting_atoms(
+    graph_before: nx.Graph,
+    graph_after: nx.Graph,
+) -> list[int]:
+    """
+    Identify reacting atoms grown to full molecules across both frames.
+
+    :param graph_before: Connectivity graph of initial frame.
+    :type graph_before: nx.Graph
+    :param graph_after: Connectivity graph of final frame.
+    :type graph_after: nx.Graph
+    :return: Sorted unique indices of atoms participating in reaction.
+    :rtype: list[int]
+    """
+    edges_before = {tuple(sorted(edge)) for edge in graph_before.edges()}
+    edges_after = {tuple(sorted(edge)) for edge in graph_after.edges()}
+    diff_nodes = {node for edge in edges_before ^ edges_after for node in edge}
+    reacting: set[int] = set()
+    for node in diff_nodes:
+        reacting.update(nx.node_connected_component(graph_before, node))
+        reacting.update(nx.node_connected_component(graph_after, node))
+    return sorted(reacting)
 
 
 def species_labels(atoms: Atoms) -> SpeciesLabels:

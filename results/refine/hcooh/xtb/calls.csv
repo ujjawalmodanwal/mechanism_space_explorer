@@ -1,0 +1,13 @@
+timestamp_utc,engine,system,task,item_id,status,wall_s,force_calls,device,git_commit,config_hash,note
+2026-11-19T02:46:08.348828+00:00,xtb,hcooh,species,CH2O2-2a71d22e,ok,0.038412,30,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.365798+00:00,xtb,hcooh,species,CHO2-063d45b9,ok,0.016858,29,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.381249+00:00,xtb,hcooh,species,CHO2-f92468da,ok,0.015394,26,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.388190+00:00,xtb,hcooh,species,CO-72c368ed,ok,0.006888,14,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.400479+00:00,xtb,hcooh,species,CO2-9d2ea55c,ok,0.012234,22,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.404065+00:00,xtb,hcooh,species,H-34ba85c0,ok,0.003526,6,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.409189+00:00,xtb,hcooh,species,H2-212475fb,ok,0.005073,12,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:08.417366+00:00,xtb,hcooh,species,H2O-2ebfe80f,ok,0.008125,19,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:14.595443+00:00,xtb,hcooh,reaction,R001,confirmed,6.178007,5827,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:29.106450+00:00,xtb,hcooh,reaction,R002,confirmed,14.510917,17497,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:50.689914+00:00,xtb,hcooh,reaction,R003,confirmed,21.583365,15575,cpu,0f50206+dirty,b8c3bcf4aef3,
+2026-11-19T02:46:51.421321+00:00,xtb,hcooh,reaction,R004,confirmed,0.731314,965,cpu,0f50206+dirty,b8c3bcf4aef3,

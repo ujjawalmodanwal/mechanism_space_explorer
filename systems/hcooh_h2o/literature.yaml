@@ -1,0 +1,16 @@
+products:
+  - name: dehydration_co_h2o
+    smiles: ["[C-]#[O+]", O]
+  - name: decarboxylation_co2_h2
+    smiles: [O=C=O, "[H][H]"]
+reference: >-
+  With water, decarboxylation becomes favored. Sources: to add.
+# Reactions added by hand (flagged source=literature in the frozen set).
+reactions:
+  - name: decarboxylation_water_assisted
+    reactant: reactant.xyz
+    product: lit_decarboxylation_water.xyz
+    note: >-
+      HCOOH + H2O -> CO2 + H2 + H2O with water as a relay: H2 from the
+      acid's C-H hydrogen and one water hydrogen; the acid's O-H hydrogen
+      goes to the water.

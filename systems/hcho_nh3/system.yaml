@@ -1,24 +1,27 @@
 md:
-  # Elevated temperature accelerates reactive barrier crossings in MD.
-  temperature_k: 1000
-  # Total simulation time in picoseconds per replicate trajectory.
-  time_ps: 20
-  # Sub-femtosecond integration time step to permit X-H bond breaking.
+  # Settings follow Zhang, Xu, Lan (2023) for HCHO + NH3 and Grimme (2019);
+  # PLAN.md, section 11. A cool bath: the metadynamics bias does the work.
+  temperature_k: 300
+  # Length of each biased replicate in picoseconds.
+  time_ps: 10
+  # Duration of unbiased pre-equilibration MD inside the wall in picoseconds.
+  equilibrate_ps: 100
+  # Time step; X-H bonds may break, so no SHAKE in the biased runs.
   step_fs: 0.5
-  # Trajectory recording interval in femtoseconds.
-  dump_fs: 10
-  # Metadynamics push strength in Hartree. Chosen by the 2026-11-17 sweep:
-  # 0.2 inside a 4 A wall gave closed-shell products; 0.05 gave none.
+  # Trajectory frames every 5 fs (event detection wants under 10 fs).
+  dump_fs: 5
+  # Bias height in Hartree per reference structure, about 0.025 x atoms;
+  # nrnet sweep scans this.
   kpush: 0.2
-  # Metadynamics Gaussian width parameter in Bohr^-2.
-  alp: 1.0
-  # Maximum number of past structures kept as bias references.
-  save: 10
-  # Logfermi wall radius in A; a tight wall forces the two molecules to
-  # meet (xTB's automatic radius let them drift apart).
-  wall_radius_ang: 4.0
-  # Independent replicates; 8 found too few events after filtering.
-  replicates: 32
+  # Gaussian width in bohr^-2 (0.6-0.7 in reactive studies).
+  alp: 0.7
+  # One reference structure, replaced every picosecond.
+  save: 1
+  # Logfermi wall radius in Angstrom (written to xtb in bohr). Sized to
+  # Zhang's 4.3 A for HCHO + NH3, scaled by mass at the same density.
+  wall_radius_ang: 4.3
+  # Independent replicates.
+  replicates: 50
   # Base integer random seed for replicate starting geometry rattle.
   base_seed: 17
   # Standard deviation of atomic rattle in Angstroms for replicate seeding.
@@ -27,3 +30,7 @@ md:
   timeout_s: 3600
   # Minimum lifetime in femtoseconds to retain a persistent intermediate.
   min_lifetime_fs: 50
+
+ranking:
+  # Ranking temperatures for this system (PLAN D13).
+  temperatures_k: [298.15, 600.0]

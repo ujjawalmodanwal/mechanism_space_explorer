@@ -7,7 +7,9 @@ Sella first-order saddle point refinement, finite-difference vibrational normal
 mode analysis, and displaced endpoint confirmation.
 """
 
-from collections.abc import Callable, Mapping, Sequence
+import signal
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -34,6 +36,7 @@ from nrnet.thermo import (
 __all__ = [
     "SEARCH_STEPS",
     "SEED_STEPS",
+    "AttemptTimeLimit",
     "SearchSettings",
     "SearchState",
     "TSResult",
@@ -41,20 +44,26 @@ __all__ = [
     "TSSeed",
     "TSStatus",
     "aligned_band",
+    "attempt_time_limit",
     "check_imaginary",
+    "check_neb_band_status",
     "confirm_endpoints",
     "confirm_step",
+    "endpoints_match_expected",
     "frequency_step",
     "highest_neb_image",
+    "is_barrierless_band",
     "load_search_settings",
     "neb_guess",
     "neb_step",
+    "raise_time_limit",
     "refine_saddle",
     "relax_endpoint",
     "relax_endpoints_step",
     "relax_single_endpoint",
     "result_from_state",
     "run_band",
+    "run_search_steps",
     "saddle_step",
     "search_candidate",
     "search_pair",
@@ -68,6 +77,7 @@ class TSStatus(StrEnum):
     """
 
     confirmed = "confirmed"
+    barrierless = "barrierless"
     endpoint_changed = "endpoint_changed"
     neb_failed = "neb_failed"
     saddle_not_converged = "saddle_not_converged"
@@ -75,6 +85,56 @@ class TSStatus(StrEnum):
     endpoint_mismatch = "endpoint_mismatch"
     unsupported = "unsupported"
     engine_error = "engine_error"
+    time_limit = "time_limit"
+
+
+class AttemptTimeLimit(BaseException):
+    """
+    Raised when a search attempt runs past its wall-time limit.
+
+    It derives from BaseException so that the stages' own handlers (Sella's
+    RuntimeError in saddle_step, engine failures) cannot swallow it.
+    """
+
+
+def raise_time_limit(signum: int, frame: object) -> None:
+    """
+    SIGALRM handler that ends the running attempt.
+
+    :param signum: Signal number (SIGALRM).
+    :type signum: int
+    :param frame: Interrupted stack frame.
+    :type frame: object
+    :raises AttemptTimeLimit: Always.
+    """
+    raise AttemptTimeLimit
+
+
+@contextmanager
+def attempt_time_limit(seconds: float | None) -> Iterator[None]:
+    """
+    Raise AttemptTimeLimit in the main thread once seconds have passed.
+
+    SIGALRM is handled between Python steps, so a native call already
+    running (one SCF) finishes first. Engines that start subprocesses
+    (ORCA) would leave them running, so set the limit only for in-process
+    engines. None or 0 disables it.
+
+    :param seconds: Wall-time limit in seconds, or None.
+    :type seconds: float or None
+    :return: Context manager yielding None.
+    :rtype: Iterator[None]
+    """
+    if not seconds:
+        yield
+        return
+    previous = signal.signal(signal.SIGALRM, raise_time_limit)
+    signal.setitimer(signal.ITIMER_REAL, float(seconds))
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
 
 
 class TSRoute(StrEnum):
@@ -103,6 +163,7 @@ class SearchSettings:
     saddle_max_steps: int
     imaginary_threshold_cm: float
     confirm_step_ang: float
+    barrierless_tol_ev: float = 0.04
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,8 +242,8 @@ class SearchState:
         """
         if not self.expected_keys:
             self.expected_keys = (
-                state_key(self.pair.before),
-                state_key(self.pair.after),
+                state_key(self.pair.before, stereo=True),
+                state_key(self.pair.after, stereo=True),
             )
 
 
@@ -230,7 +291,11 @@ def relax_endpoint(
     :return: Relaxed geometry, energy in eV, steps taken, and match flag.
     :rtype: tuple[Atoms, float, int, bool]
     """
-    target = state_key(atoms) if expected_state is None else expected_state
+    target = (
+        state_key(atoms, stereo=True)
+        if expected_state is None
+        else expected_state
+    )
     eval_atoms = attach(atoms, engine_settings)
     res = relax(
         eval_atoms,
@@ -238,7 +303,7 @@ def relax_endpoint(
         max_steps=max_steps,
     )
     energy = float(attach(res.atoms, engine_settings).get_potential_energy())
-    matched = bool(state_key(res.atoms) == target)
+    matched = bool(state_key(res.atoms, stereo=True) == target)
     return res.atoms, energy, res.steps, matched
 
 
@@ -468,7 +533,7 @@ def confirm_endpoints(
             fmax_ev_per_ang=fmax_ev_per_ang,
             max_steps=max_steps,
         )
-        states.append(state_key(res.atoms))
+        states.append(state_key(res.atoms, stereo=True))
         total_steps += res.steps
     return bool(set(states) == set(expected_keys)), total_steps
 
@@ -519,6 +584,67 @@ def relax_endpoints_step(state: SearchState) -> TSStatus | None:
     return None
 
 
+def is_barrierless_band(
+    energies: Sequence[float],
+    tol_ev: float,
+) -> bool:
+    """
+    Check if no interior image energy exceeds endpoints by more than tolerance.
+
+    :param energies: Sequence of image potential energies along NEB band in eV.
+    :type energies: Sequence[float]
+    :param tol_ev: Maximum allowable elevation above endpoints in eV.
+    :type tol_ev: float
+    :return: True if band has no interior maximum above endpoints + tol_ev.
+    :rtype: bool
+    """
+    if len(energies) < 3:
+        return False
+    max_endpoints = max(energies[0], energies[-1])
+    max_interior = max(energies[1:-1])
+    return bool(max_interior <= max_endpoints + tol_ev)
+
+
+def endpoints_match_expected(state: SearchState) -> bool:
+    """
+    Verify both relaxed endpoints match the expected canonical state keys.
+
+    :param state: Active transition state search state dataclass.
+    :type state: SearchState
+    :return: True if both relaxed endpoints match expected keys.
+    :rtype: bool
+    """
+    if state.relaxed_reactant is None or state.relaxed_product is None:
+        return False
+    keys = (
+        state_key(state.relaxed_reactant, stereo=True),
+        state_key(state.relaxed_product, stereo=True),
+    )
+    return bool(keys == state.expected_keys)
+
+
+def check_neb_band_status(
+    state: SearchState,
+    energies: Sequence[float],
+) -> TSStatus | None:
+    """
+    Assess NEB band energies for numerical divergence or barrierless pathway.
+
+    :param state: Active transition state search state dataclass.
+    :type state: SearchState
+    :param energies: Sequence of image energies along NEB band.
+    :type energies: Sequence[float]
+    :return: Failure status if NEB fails or barrierless, None to continue.
+    :rtype: TSStatus or None
+    """
+    if not all(np.isfinite(val) for val in energies):
+        return TSStatus.neb_failed
+    tol = state.search_settings.barrierless_tol_ev
+    if is_barrierless_band(energies, tol) and endpoints_match_expected(state):
+        return TSStatus.barrierless
+    return None
+
+
 def neb_step(state: SearchState) -> TSStatus | None:
     """
     Generate transition state guess using climbing-image NEB with FIRE.
@@ -538,9 +664,7 @@ def neb_step(state: SearchState) -> TSStatus | None:
     )
     state.force_calls += steps * (cfg.neb_images - 2)
     state.neb_converged, state.ts_guess = conv, image
-    if not all(np.isfinite(val) for val in ens):
-        return TSStatus.neb_failed
-    return None
+    return check_neb_band_status(state, ens)
 
 
 def saddle_step(state: SearchState) -> TSStatus | None:
@@ -555,9 +679,17 @@ def saddle_step(state: SearchState) -> TSStatus | None:
     assert state.ts_guess is not None
     cfg = state.search_settings
     params = (cfg.saddle_fmax_ev_per_ang, cfg.saddle_max_steps)
-    refined, conv, steps, energy = refine_saddle(
-        state.ts_guess, state.engine_settings, *params
-    )
+    try:
+        refined, conv, steps, energy = refine_saddle(
+            state.ts_guess, state.engine_settings, *params
+        )
+    except CalculationFailed:
+        raise
+    except RuntimeError as err:
+        # Sella gives up when its internal-coordinate step will not solve
+        # ("Geometry update ODE is taking too long to converge!").
+        state.note = str(err)
+        return TSStatus.saddle_not_converged
     state.force_calls += steps
     if not np.isfinite(energy):
         return TSStatus.engine_error
@@ -702,19 +834,39 @@ def search_pair(
     state = SearchState(pair, pair_index, engine_settings, search_settings)
     state.seed = seed
     steps = SEARCH_STEPS if seed is None else SEED_STEPS
-    status = TSStatus.confirmed
+    limit = engine_settings.extra.get("attempt_time_limit_s")
     try:
-        for step in steps:
-            res = step(state)
-            if res is not None:
-                status = res
-                break
+        with attempt_time_limit(limit):
+            status = run_search_steps(state, steps)
     except UnsupportedSpecies:
         status = TSStatus.unsupported
     except CalculationFailed as err:
         # Keep the engine's message (e.g. SCF not converged) in the record.
         status, state.note = TSStatus.engine_error, str(err)
+    except AttemptTimeLimit:
+        status, state.note = TSStatus.time_limit, f"attempt over {limit} s"
     return result_from_state(state, status)
+
+
+def run_search_steps(
+    state: SearchState,
+    steps: Sequence[Callable[[SearchState], TSStatus | None]],
+) -> TSStatus:
+    """
+    Run search stages in order; the first status a stage returns ends it.
+
+    :param state: Active transition state search state dataclass.
+    :type state: SearchState
+    :param steps: Stages to run, SEARCH_STEPS or SEED_STEPS.
+    :type steps: Sequence[Callable[[SearchState], TSStatus | None]]
+    :return: The ending status, confirmed when every stage passes.
+    :rtype: TSStatus
+    """
+    for step in steps:
+        res = step(state)
+        if res is not None:
+            return res
+    return TSStatus.confirmed
 
 
 def search_candidate(
@@ -724,10 +876,12 @@ def search_candidate(
     seed: TSSeed | None,
 ) -> list[TSResult]:
     """
-    Search transition states across candidate endpoint pairs in sequence.
+    Search transition states on every attempt of a candidate reaction.
 
-    With a seed, the seeded pair is tried first; if that attempt is not
-    confirmed, the engine's own band search runs over every pair.
+    With a seed, the seeded pair is tried first, then the engine's own band
+    on every pair. All attempts run because pairs can confirm different
+    saddles between the same ends; refine keeps the lowest, and prefers
+    any confirmed saddle to a barrierless band.
 
     :param candidate: Candidate reaction containing ordered endpoint pairs.
     :type candidate: Candidate
@@ -737,7 +891,7 @@ def search_candidate(
     :type search_settings: SearchSettings
     :param seed: Another engine's confirmed TS, or None.
     :type seed: TSSeed or None
-    :return: List of TS results for attempted pairs up to first confirmation.
+    :return: TS results of every attempt.
     :rtype: list[TSResult]
     """
     attempts = [] if seed is None else [(seed.pair_index, seed.atoms)]
@@ -749,6 +903,4 @@ def search_candidate(
             pair, pair_idx, engine_settings, search_settings, seed_atoms
         )
         results.append(res)
-        if res.status == TSStatus.confirmed:
-            break
     return results

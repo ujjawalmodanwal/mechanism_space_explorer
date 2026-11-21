@@ -1,0 +1,19 @@
+products:
+  - name: norbornene_anhydride_adduct
+    smiles: [O=C1OC(=O)C2C3C=CC(C3)C12]
+reference: >-
+  Endo kinetic, exo thermodynamic; ddG(TS) = 2.2 kcal/mol favoring endo;
+  45:55 endo/exo after heating at 220 C. Sources: to add.
+reactions:
+  - name: diels_alder_endo
+    reactant: reactant_endo.xyz
+    product: lit_adduct_endo.xyz
+    note: >-
+      Endo [4+2] adduct, built by an xtb optimization with the two new C-C
+      bonds held at 1.56 A, then a free optimization. Not found in the MD
+      sweep (only a [2+2] adduct). Added only because the MD missed it.
+  - name: diels_alder_exo
+    reactant: reactant_exo.xyz
+    product: lit_adduct_exo.xyz
+    note: >-
+      Exo [4+2] adduct, built as for endo from the exo start complex.

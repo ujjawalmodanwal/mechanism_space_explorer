@@ -1,0 +1,13 @@
+key,formula,smiles,inchikey14,runs_with,in_frozen_sets,first_run,first_frame
+CH2O2-2a71d22e,CH2O2,O=CO,BDAGIHXWWSANSR,600,True,runs/sweep/hcooh_h2o/T300_k0.03/g1/rep_0/xtb.trj,200
+H2O-2ebfe80f,H2O,O,XLYOFNOQVPJJNP,600,True,runs/sweep/hcooh_h2o/T300_k0.03/g1/rep_0/xtb.trj,200
+CO2-9d2ea55c,CO2,O=C=O,CURLTUGMZLYLDI,76,True,runs/sweep/hcooh_h2o/T300_k0.03/g1/rep_43/xtb.trj,1200
+H2-212475fb,H2,[H][H],UFHFLCQGNIYNRP,72,True,runs/sweep/hcooh_h2o/T300_k0.03/g1/rep_43/xtb.trj,1200
+CO-72c368ed,CO,[C-]#[O+],UGFAIRIUMAVXCW,25,True,runs/sweep/hcooh_h2o/T300_k0.03/g2/rep_21/xtb.trj,1400
+H-34ba85c0,H,,,15,True,runs/sweep/hcooh_h2o/T300_k0.03/g2/rep_19/xtb.trj,1009
+CH2O3-e08c66ff,CH2O3,O=C(O)O,BVKZGUZCCUSVTD,8,True,runs/sweep/hcooh_h2o/T300_k0.03/g2/rep_5/xtb.trj,800
+CH4O3-1b786c83,CH4O3,OC(O)O,RLAHWVDQYNDAGG,8,True,runs/sweep/hcooh_h2o/T300_k0.03/g6/rep_30/xtb.trj,1000
+CHO2-f92468da,CHO2,,,3,True,runs/sweep/hcooh_h2o/T300_k0.035/g3/rep_16/xtb.trj,1011
+HO-e179f131,HO,,,1,False,runs/sweep/hcooh_h2o/T300_k0.035/g2/rep_8/xtb.trj,632
+CHO-5e7af12d,CHO,,,1,False,runs/sweep/hcooh_h2o/T300_k0.035/g2/rep_8/xtb.trj,632
+CHO2-063d45b9,CHO2,,,1,True,runs/sweep/hcooh_h2o/T300_k0.035/g2/rep_47/xtb.trj,1216

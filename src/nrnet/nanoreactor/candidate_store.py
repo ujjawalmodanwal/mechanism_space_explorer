@@ -27,6 +27,7 @@ from nrnet.nanoreactor.candidates import (
 __all__ = [
     "freeze",
     "load_candidates",
+    "parse_literature_name",
     "write_candidate_files",
 ]
 
@@ -157,6 +158,8 @@ def serialize_candidate(
         "mapped_smiles": candidate.mapped_smiles,
         "n_events": candidate.n_events,
         "first_seen_fs": candidate.first_seen_fs,
+        "source": candidate.source,
+        "literature_name": candidate.literature_name,
         "pair_frame_indices": [list(pair) for pair in pair_indices],
     }
 
@@ -353,8 +356,12 @@ def pair_from_frames(f_b: Atoms, f_a: Atoms) -> EndpointPair:
     """
     raw_ids = f_b.info["atom_ids"]
     atom_ids = tuple(int(x) for x in raw_ids)
+    raw_rep = f_b.info["replicate"]
+    replicate = (
+        tuple(raw_rep) if isinstance(raw_rep, (list, tuple)) else int(raw_rep)
+    )
     return EndpointPair(
-        replicate=int(f_b.info["replicate"]),
+        replicate=replicate,
         time_fs=float(f_b.info["time_fs"]),
         atom_ids=atom_ids,
         before=f_b.copy(),
@@ -381,6 +388,19 @@ def parse_pair_frames(
     )
 
 
+def parse_literature_name(data: Mapping[str, Any]) -> str | None:
+    """
+    Extract optional literature reaction name from record mapping.
+
+    :param data: Candidate JSON record dictionary.
+    :type data: Mapping[str, Any]
+    :return: Literature reaction name or None.
+    :rtype: str or None
+    """
+    raw = data.get("literature_name")
+    return str(raw) if raw is not None else None
+
+
 def candidate_from_record(
     data: Mapping[str, Any],
     pairs: tuple[EndpointPair, ...],
@@ -405,6 +425,8 @@ def candidate_from_record(
         mapped_smiles=str(data["mapped_smiles"]),
         n_events=int(data["n_events"]),
         first_seen_fs=float(data["first_seen_fs"]),
+        source=str(data.get("source", "md")),
+        literature_name=parse_literature_name(data),
     )
 
 
@@ -492,6 +514,7 @@ def freeze(
     dump_fs: float,
     engine_settings: EngineSettings | str | Path,
     out_dir: str | Path,
+    replicate_ids: Sequence[int | tuple[str, int]] | None = None,
 ) -> CandidateSet:
     """
     Freeze nanoreactor trajectories into a validated candidate set on disk.
@@ -508,11 +531,18 @@ def freeze(
     :type engine_settings: EngineSettings or str or Path
     :param out_dir: Destination directory for the frozen files.
     :type out_dir: str or Path
+    :param replicate_ids: Optional custom replicate identity per trajectory.
+    :type replicate_ids: Sequence[int or tuple[str, int]] or None
     :return: The candidate set that was written.
     :rtype: CandidateSet
     """
     candidate_set = extract_candidate_set(
-        reactant, trajectories, min_frames, dump_fs, engine_settings
+        reactant,
+        trajectories,
+        min_frames,
+        dump_fs,
+        engine_settings,
+        replicate_ids,
     )
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)

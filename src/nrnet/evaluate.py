@@ -50,6 +50,7 @@ __all__ = [
     "TABLE_BUILDERS",
     "TOP_N",
     "EvaluationScope",
+    "agreement_tuple",
     "build_e1_steps_table",
     "build_e1_summary_table",
     "build_e2_networks_table",
@@ -64,11 +65,14 @@ __all__ = [
     "evaluate",
     "field_error",
     "frame_rmsd",
+    "has_ranker",
     "load_engine_ranks",
     "load_yield_cutoff",
     "major_product",
     "make_scope",
     "network_agreement",
+    "no_barrierless_agreement",
+    "primary_network_agreement",
     "r4_yields",
     "ranker_agreement",
     "ranker_rows",
@@ -188,6 +192,7 @@ def reaction_energies(
     e_ts, g_ts = confirmed_ts_values(row, label)
     return {
         "reaction_id": candidate.reaction_id,
+        "source": candidate.source,
         "status": STATUS_MISSING if row is None else row["status"],
         "de_rxn_kcal": energy_change_kcal(e_react, e_prod),
         "dg_rxn_kcal": energy_change_kcal(g_react, g_prod),
@@ -418,20 +423,23 @@ def ranker_rows(
 def r4_yields(
     ranks: Sequence[Mapping[str, Any]],
     temperature_k: float,
+    ranker: str = "R4",
 ) -> dict[str, float]:
     """
-    Map product states to their kinetic yield scores under ranker R4.
+    Map product states to their kinetic yield scores under specified ranker.
 
     :param ranks: Sequence of ranked product records.
     :type ranks: Sequence[Mapping[str, Any]]
     :param temperature_k: Evaluation temperature in Kelvin.
     :type temperature_k: float
-    :return: Mapping of product state identifier to R4 yield score.
+    :param ranker: Ranker strategy name (defaults to 'R4').
+    :type ranker: str
+    :return: Mapping of product state identifier to yield score.
     :rtype: dict[str, float]
     """
     return {
         str(row["state"]): float(row["score"])
-        for row in ranker_rows(ranks, "R4", temperature_k)
+        for row in ranker_rows(ranks, ranker, temperature_k)
     }
 
 
@@ -527,6 +535,123 @@ def major_product(yields: Mapping[str, float], yield_cutoff: float) -> str:
     return max(formed, key=formed.__getitem__)
 
 
+def has_ranker(ranks: Sequence[Mapping[str, Any]], ranker: str) -> bool:
+    """
+    Check if sequence of rank rows contains specified ranker strategy.
+
+    :param ranks: Sequence of ranked product records.
+    :type ranks: Sequence[Mapping[str, Any]]
+    :param ranker: Ranker strategy name to check.
+    :type ranker: str
+    :return: True if ranker exists in records, False otherwise.
+    :rtype: bool
+    """
+    return any(str(row.get("ranker")) == ranker for row in ranks)
+
+
+def agreement_tuple(
+    eng_yields: Mapping[str, float],
+    ref_yields: Mapping[str, float],
+    yield_cutoff: float,
+) -> tuple[float | None, float | None, str, str, bool]:
+    """
+    Compute Jaccard, Kendall tau, and major product agreement for yields.
+
+    :param eng_yields: Mapping of engine product state to kinetic yield.
+    :type eng_yields: Mapping[str, float]
+    :param ref_yields: Mapping of reference product state to kinetic yield.
+    :type ref_yields: Mapping[str, float]
+    :param yield_cutoff: Kinetic yield threshold defining product states.
+    :type yield_cutoff: float
+    :return: Tuple of Jaccard, Kendall tau, engine major, ref major, and match.
+    :rtype: tuple[float or None, float or None, str, str, bool]
+    """
+    prods_eng = {s for s, y in eng_yields.items() if y >= yield_cutoff}
+    prods_ref = {s for s, y in ref_yields.items() if y >= yield_cutoff}
+    union = prods_eng | prods_ref
+    major = major_product(eng_yields, yield_cutoff)
+    ref_major = major_product(ref_yields, yield_cutoff)
+    return (
+        compute_jaccard(prods_eng, prods_ref),
+        compute_kendall_tau(eng_yields, ref_yields, union),
+        major,
+        ref_major,
+        major == ref_major,
+    )
+
+
+def primary_network_agreement(
+    engine_ranks: Sequence[Mapping[str, Any]],
+    reference_ranks: Sequence[Mapping[str, Any]],
+    temperature_k: float,
+    yield_cutoff: float,
+) -> dict[str, Any]:
+    """
+    Compute primary agreement metrics for R4 kinetic yields and R3 paths.
+
+    :param engine_ranks: Candidate engine ranked product records.
+    :type engine_ranks: Sequence[Mapping[str, Any]]
+    :param reference_ranks: Reference engine ranked product records.
+    :type reference_ranks: Sequence[Mapping[str, Any]]
+    :param temperature_k: Evaluation temperature in Kelvin.
+    :type temperature_k: float
+    :param yield_cutoff: Kinetic yield threshold defining product states.
+    :type yield_cutoff: float
+    :return: Dictionary containing primary agreement metrics.
+    :rtype: dict[str, Any]
+    """
+    eng_y = r4_yields(engine_ranks, temperature_k)
+    ref_y = r4_yields(reference_ranks, temperature_k)
+    tup = agreement_tuple(eng_y, ref_y, yield_cutoff)
+    r3_eng = ranker_rows(engine_ranks, "R3", temperature_k)
+    r3_ref = ranker_rows(reference_ranks, "R3", temperature_k)
+    return {
+        "jaccard": tup[0],
+        "kendall_tau": tup[1],
+        "major_product": tup[2],
+        "reference_major_product": tup[3],
+        "same_major_product": tup[4],
+        "same_top_path": top_position_match(r3_eng, r3_ref, "path"),
+    }
+
+
+def no_barrierless_agreement(
+    engine_ranks: Sequence[Mapping[str, Any]],
+    reference_ranks: Sequence[Mapping[str, Any]],
+    temperature_k: float,
+    yield_cutoff: float,
+) -> dict[str, Any]:
+    """
+    Compute network agreement metrics omitting barrierless channels.
+
+    :param engine_ranks: Candidate engine ranked product records.
+    :type engine_ranks: Sequence[Mapping[str, Any]]
+    :param reference_ranks: Reference engine ranked product records.
+    :type reference_ranks: Sequence[Mapping[str, Any]]
+    :param temperature_k: Evaluation temperature in Kelvin.
+    :type temperature_k: float
+    :param yield_cutoff: Kinetic yield threshold defining product states.
+    :type yield_cutoff: float
+    :return: Dictionary containing no-barrierless agreement metrics.
+    :rtype: dict[str, Any]
+    """
+    has_nb = has_ranker(engine_ranks, "R4_no_barrierless") or has_ranker(
+        reference_ranks, "R4_no_barrierless"
+    )
+    if not has_nb:
+        return {}
+    eng_nb = r4_yields(engine_ranks, temperature_k, "R4_no_barrierless")
+    ref_nb = r4_yields(reference_ranks, temperature_k, "R4_no_barrierless")
+    tup = agreement_tuple(eng_nb, ref_nb, yield_cutoff)
+    return {
+        "jaccard_no_barrierless": tup[0],
+        "kendall_tau_no_barrierless": tup[1],
+        "major_product_no_barrierless": tup[2],
+        "reference_major_product_no_barrierless": tup[3],
+        "same_major_product_no_barrierless": tup[4],
+    }
+
+
 def network_agreement(
     engine_ranks: Sequence[Mapping[str, Any]],
     reference_ranks: Sequence[Mapping[str, Any]],
@@ -547,23 +672,14 @@ def network_agreement(
     :return: Dictionary containing Jaccard, Kendall tau, and top matches.
     :rtype: dict[str, Any]
     """
-    eng_y = r4_yields(engine_ranks, temperature_k)
-    ref_y = r4_yields(reference_ranks, temperature_k)
-    prods_eng = {s for s, y in eng_y.items() if y >= yield_cutoff}
-    prods_ref = {s for s, y in ref_y.items() if y >= yield_cutoff}
-    union = prods_eng | prods_ref
-    major = major_product(eng_y, yield_cutoff)
-    ref_major = major_product(ref_y, yield_cutoff)
-    r3_eng = ranker_rows(engine_ranks, "R3", temperature_k)
-    r3_ref = ranker_rows(reference_ranks, "R3", temperature_k)
-    return {
-        "jaccard": compute_jaccard(prods_eng, prods_ref),
-        "kendall_tau": compute_kendall_tau(eng_y, ref_y, union),
-        "major_product": major,
-        "reference_major_product": ref_major,
-        "same_major_product": major == ref_major,
-        "same_top_path": top_position_match(r3_eng, r3_ref, "path"),
-    }
+    out = primary_network_agreement(
+        engine_ranks, reference_ranks, temperature_k, yield_cutoff
+    )
+    nb_agree = no_barrierless_agreement(
+        engine_ranks, reference_ranks, temperature_k, yield_cutoff
+    )
+    out.update(nb_agree)
+    return out
 
 
 def single_ranker_agreement(
@@ -730,6 +846,7 @@ def make_scope(
     candidates_dir: str | Path,
     results_dir: str | Path,
     search_path: str | Path,
+    systems_dir: str | Path = "systems",
 ) -> EvaluationScope:
     """
     Load the candidate set and settings into one evaluation scope.
@@ -746,16 +863,23 @@ def make_scope(
     :type results_dir: str or Path
     :param search_path: Path to search YAML configuration file.
     :type search_path: str or Path
+    :param systems_dir: Systems configuration base directory.
+    :type systems_dir: str or Path
     :return: The shared inputs of every table.
     :rtype: EvaluationScope
     """
+    sys_yaml = Path(systems_dir) / system / "system.yaml"
+    if not sys_yaml.is_file():
+        alt = Path(search_path).parent / "system.yaml"
+        if alt.is_file():
+            sys_yaml = alt
     return EvaluationScope(
         candidate_set=load_candidates(Path(candidates_dir) / system),
         results_dir=Path(results_dir),
         system=system,
         reference=reference,
         engines=tuple(eng for eng in engines if eng != reference),
-        temperatures=tuple(load_thermo_temperatures(search_path)),
+        temperatures=tuple(load_thermo_temperatures(sys_yaml)),
         yield_cutoff=load_yield_cutoff(search_path),
     )
 
@@ -893,6 +1017,7 @@ def evaluate(
     candidates_dir: str | Path,
     results_dir: str | Path,
     search_path: str | Path,
+    systems_dir: str | Path = "systems",
 ) -> Path:
     """
     Execute full evaluation pipeline and write comparison tables as CSV.
@@ -909,11 +1034,19 @@ def evaluate(
     :type results_dir: str or Path
     :param search_path: Path to search YAML configuration file.
     :type search_path: str or Path
+    :param systems_dir: Systems configuration base directory.
+    :type systems_dir: str or Path
     :return: Destination evaluation output directory.
     :rtype: Path
     """
     scope = make_scope(
-        system, reference, engines, candidates_dir, results_dir, search_path
+        system,
+        reference,
+        engines,
+        candidates_dir,
+        results_dir,
+        search_path,
+        systems_dir=systems_dir,
     )
     out_dir = scope.results_dir / "evaluate" / system
     for name, builder in TABLE_BUILDERS.items():

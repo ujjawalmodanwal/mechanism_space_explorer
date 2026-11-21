@@ -357,3 +357,44 @@ def test_find_events_geometry_hcho_nh3() -> None:
     assert event.state_before == state_key(reactants)
     assert event.state_after == state_key(products)
     assert event.state_before != event.state_after
+
+
+@pytest.mark.parametrize(
+    ("sequence", "settle", "before_idx", "after_idx"),
+    [
+        # Endpoints step two frames into each run.
+        ("AAAAAABBBBBB", 2, 3, 8),
+        # A short first run keeps its first frame; the later run its last.
+        ("AABBBBB", 3, 0, 5),
+        # A dropped blip (C at 4) inside a merged run is skipped toward
+        # the crossing, so the endpoint stays in the run's own state.
+        ("AAAACAAAABBBB", 4, 5, 12),
+    ],
+)
+def test_find_events_settle_frames(
+    sequence: str,
+    settle: int,
+    before_idx: int,
+    after_idx: int,
+) -> None:
+    """
+    Verify settle_frames moves endpoints away from the crossing.
+
+    :param sequence: Sequence string where letters select distinct elements.
+    :type sequence: str
+    :param settle: Frames to step away from the crossing.
+    :type settle: int
+    :param before_idx: Expected frame index of the earlier endpoint.
+    :type before_idx: int
+    :param after_idx: Expected frame index of the later endpoint.
+    :type after_idx: int
+    :return: None.
+    :rtype: None
+    """
+    frames = make_dummy_frames(sequence)
+    events = find_events(
+        frames, 1, min_frames=3, dump_fs=10.0, settle_frames=settle
+    )
+    assert len(events) == 1
+    assert events[0].frame_before is frames[before_idx]
+    assert events[0].frame_after is frames[after_idx]

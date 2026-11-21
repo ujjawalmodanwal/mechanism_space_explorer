@@ -39,6 +39,7 @@ __all__ = [
     "CandidateSet",
     "EndpointPair",
     "Species",
+    "build_candidates_from_group",
     "compile_candidate_stats",
     "extract_candidate_set",
 ]
@@ -80,7 +81,7 @@ class EndpointPair:
     Pair of relaxed endpoint geometries for an individual reaction event.
 
     :param replicate: Identifier of trajectory replicate where event occurred.
-    :type replicate: int
+    :type replicate: int or tuple[str, int]
     :param time_fs: Timestamp of event onset in femtoseconds.
     :type time_fs: float
     :param atom_ids: Indices of reacting atoms mapped into the system frame.
@@ -91,7 +92,7 @@ class EndpointPair:
     :type after: Atoms
     """
 
-    replicate: int
+    replicate: int | tuple[str, int]
     time_fs: float
     atom_ids: tuple[int, ...]
     before: Atoms = field(compare=False)
@@ -121,6 +122,10 @@ class Candidate:
     :type n_events: int
     :param first_seen_fs: Timestamp in femtoseconds of earliest observed event.
     :type first_seen_fs: float
+    :param source: Origin of candidate reaction ('md' or 'literature').
+    :type source: str
+    :param literature_name: Hand-built literature identifier name if matched.
+    :type literature_name: str or None
     """
 
     reaction_id: str
@@ -132,6 +137,8 @@ class Candidate:
     mapped_smiles: str
     n_events: int
     first_seen_fs: float
+    source: str = "md"
+    literature_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +166,7 @@ def collect_events(
     trajectories: Sequence[Sequence[Atoms]],
     min_frames: int,
     dump_fs: float,
+    replicate_ids: Sequence[int | tuple[str, int]] | None = None,
 ) -> list[Event]:
     """
     Detect reaction events across all trajectory replicates.
@@ -169,12 +177,17 @@ def collect_events(
     :type min_frames: int
     :param dump_fs: Trajectory frame dump interval in femtoseconds.
     :type dump_fs: float
+    :param replicate_ids: Optional custom replicate identity per trajectory.
+    :type replicate_ids: Sequence[int or tuple[str, int]] or None
     :return: Flat list of extracted reaction events.
     :rtype: list[Event]
     """
     events: list[Event] = []
-    for replicate, frames in enumerate(trajectories):
-        found = find_events(frames, replicate, min_frames, dump_fs)
+    for idx, frames in enumerate(trajectories):
+        rep = replicate_ids[idx] if replicate_ids is not None else idx
+        found = find_events(
+            frames, rep, min_frames, dump_fs, settle_frames=min_frames
+        )
         events.extend(found)
     return events
 
@@ -228,7 +241,7 @@ def group_by_state_pair(events: Sequence[Event]) -> list[list[Event]]:
     raw_groups: dict[tuple[tuple[str, ...], ...], list[Event]] = {}
     for ev in events:
         if ev.state_before == ev.state_after:
-            LOGGER.info("Rejected identical state in rep %d", ev.replicate)
+            LOGGER.info("Rejected identical state in rep %s", ev.replicate)
             continue
         key = tuple(sorted([ev.state_before, ev.state_after]))
         raw_groups.setdefault(key, []).append(ev)
@@ -333,6 +346,10 @@ def validate_pair_states(
         return "state_mismatch"
     if key_b == key_a:
         return "identical_states"
+    if state_key(res_b.atoms, stereo=True) == state_key(
+        res_a.atoms, stereo=True
+    ):
+        return "identical_states"
     return None
 
 
@@ -414,15 +431,88 @@ def record_rejected_pair(
         LOGGER.info("Rejected pair: %s", reason)
 
 
+def record_accepted_pair(
+    event: Event,
+    pair: EndpointPair,
+    pairs_by_stereo: dict[
+        tuple[tuple[str, ...], tuple[str, ...]], list[EndpointPair]
+    ],
+    first_events: dict[tuple[tuple[str, ...], tuple[str, ...]], Event],
+    counts: Counter[tuple[tuple[str, ...], tuple[str, ...]]],
+) -> None:
+    """
+    Tally an accepted pair under its stereo-aware endpoint state pair.
+
+    :param event: Reaction event producing the pair.
+    :type event: Event
+    :param pair: Relaxed endpoint pair.
+    :type pair: EndpointPair
+    :param pairs_by_stereo: Map of stereo state pair to accepted pairs.
+    :type pairs_by_stereo: dict[tuple, list[EndpointPair]]
+    :param first_events: Earliest event for each stereo state pair.
+    :type first_events: dict[tuple, Event]
+    :param counts: Total count of raw events producing each stereo pair.
+    :type counts: Counter[tuple]
+    :return: None.
+    :rtype: None
+    """
+    stereo_pair = (
+        state_key(pair.before, stereo=True),
+        state_key(pair.after, stereo=True),
+    )
+    counts[stereo_pair] += 1
+    if stereo_pair not in first_events:
+        first_events[stereo_pair] = event
+        pairs_by_stereo[stereo_pair] = []
+    if len(pairs_by_stereo[stereo_pair]) < PAIRS_PER_CANDIDATE:
+        pairs_by_stereo[stereo_pair].append(pair)
+
+
+def collect_stereo_pairs(
+    group: Sequence[Event],
+    settings: EngineSettings,
+    rejections: Counter[str],
+) -> tuple[
+    dict[tuple[tuple[str, ...], tuple[str, ...]], list[EndpointPair]],
+    dict[tuple[tuple[str, ...], tuple[str, ...]], Event],
+    Counter[tuple[tuple[str, ...], tuple[str, ...]]],
+]:
+    """
+    Relax event pairs and group accepted pairs by stereo-aware endpoint states.
+
+    :param group: Oriented events sharing an unordered state pair.
+    :type group: Sequence[Event]
+    :param settings: Engine configuration settings.
+    :type settings: EngineSettings
+    :param rejections: Mutable tally mapping rejection reasons to counts.
+    :type rejections: Counter[str]
+    :return: Triplet of pairs by stereo key, first events, and event counts.
+    :rtype: tuple[dict, dict, Counter]
+    """
+    pairs_by_stereo: dict[
+        tuple[tuple[str, ...], tuple[str, ...]], list[EndpointPair]
+    ] = {}
+    first_events: dict[tuple[tuple[str, ...], tuple[str, ...]], Event] = {}
+    counts: Counter[tuple[tuple[str, ...], tuple[str, ...]]] = Counter()
+    for event in group:
+        pair, reason = build_endpoint_pair(event, settings)
+        if pair is not None:
+            record_accepted_pair(
+                event, pair, pairs_by_stereo, first_events, counts
+            )
+        record_rejected_pair(reason, rejections)
+    return pairs_by_stereo, first_events, counts
+
+
 def collect_candidate_pairs(
     events: Sequence[Event],
     settings: EngineSettings,
     rejections: Counter[str],
 ) -> list[EndpointPair]:
     """
-    Collect up to PAIRS_PER_CANDIDATE accepted endpoint pairs for a candidate.
+    Collect accepted endpoint pairs for an event sequence across stereo types.
 
-    :param events: Oriented event sequence belonging to candidate.
+    :param events: Oriented event sequence.
     :type events: Sequence[Event]
     :param settings: Engine configuration settings.
     :type settings: EngineSettings
@@ -431,15 +521,11 @@ def collect_candidate_pairs(
     :return: List of accepted relaxed endpoint pairs.
     :rtype: list[EndpointPair]
     """
-    accepted: list[EndpointPair] = []
-    for event in events:
-        pair, reason = build_endpoint_pair(event, settings)
-        if pair is not None:
-            accepted.append(pair)
-            if len(accepted) == PAIRS_PER_CANDIDATE:
-                break
-        record_rejected_pair(reason, rejections)
-    return accepted
+    pairs_map, _, _ = collect_stereo_pairs(events, settings, rejections)
+    collected: list[EndpointPair] = []
+    for pairs in pairs_map.values():
+        collected.extend(pairs)
+    return collected
 
 
 def pair_mapped_smiles(pair: EndpointPair) -> str:
@@ -463,22 +549,19 @@ def pair_mapped_smiles(pair: EndpointPair) -> str:
 
 
 def candidate_endpoint_keys(
-    event: Event,
-    atom_ids: Sequence[int],
+    pair: EndpointPair,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """
-    Extract reactant and product species keys for candidate reacting atoms.
+    Extract reactant and product species keys for candidate endpoint pair.
 
-    :param event: Representative reaction event.
-    :type event: Event
-    :param atom_ids: Indices of reacting atoms.
-    :type atom_ids: Sequence[int]
-    :return: Pair of expected reactant keys and expected product keys.
+    :param pair: Relaxed endpoint pair.
+    :type pair: EndpointPair
+    :return: Pair of stereo-aware reactant keys and product keys.
     :rtype: tuple[tuple[str, ...], tuple[str, ...]]
     """
     return (
-        expected_keys_for_frame(event.frame_before, atom_ids),
-        expected_keys_for_frame(event.frame_after, atom_ids),
+        state_key(pair.before, stereo=True),
+        state_key(pair.after, stereo=True),
     )
 
 
@@ -496,7 +579,7 @@ def candidate_reaction_meta(
     :return: Dictionary containing states, species keys, and mapped SMILES.
     :rtype: dict[str, Any]
     """
-    r_keys, p_keys = candidate_endpoint_keys(event, pair.atom_ids)
+    r_keys, p_keys = candidate_endpoint_keys(pair)
     return {
         "state_a": event.state_before,
         "state_b": event.state_after,
@@ -536,6 +619,48 @@ def assemble_candidate(
     )
 
 
+def build_candidates_from_group(
+    group: Sequence[Event],
+    settings: EngineSettings,
+    rejections: Counter[str],
+    candidate_start_idx: int,
+) -> list[Candidate]:
+    """
+    Build Candidate reactions for each stereo-aware pair from an event group.
+
+    :param group: Oriented events for a single unordered state pair.
+    :type group: Sequence[Event]
+    :param settings: Engine configuration settings.
+    :type settings: EngineSettings
+    :param rejections: Mutable tally mapping rejection reasons to counts.
+    :type rejections: Counter[str]
+    :param candidate_start_idx: Starting 1-based candidate index.
+    :type candidate_start_idx: int
+    :return: List of validated Candidate instances.
+    :rtype: list[Candidate]
+    """
+    pairs_map, first_events, counts = collect_stereo_pairs(
+        group, settings, rejections
+    )
+    sorted_pairs = sorted(
+        pairs_map.keys(),
+        key=lambda sp: (first_events[sp].replicate, first_events[sp].time_fs),
+    )
+    candidates: list[Candidate] = []
+    for offset, stereo_pair in enumerate(sorted_pairs):
+        n_events = len(group) if len(sorted_pairs) == 1 else counts[stereo_pair]
+        cand_id = f"R{candidate_start_idx + offset:03d}"
+        candidates.append(
+            assemble_candidate(
+                reaction_id=cand_id,
+                event=first_events[stereo_pair],
+                pairs=pairs_map[stereo_pair],
+                n_events=n_events,
+            )
+        )
+    return candidates
+
+
 def build_candidate(
     group: Sequence[Event],
     settings: EngineSettings,
@@ -543,7 +668,7 @@ def build_candidate(
     candidate_idx: int,
 ) -> Candidate | None:
     """
-    Build a Candidate reaction from an oriented event group.
+    Build first Candidate reaction from an oriented event group.
 
     :param group: Oriented events for a single unordered state pair.
     :type group: Sequence[Event]
@@ -553,18 +678,13 @@ def build_candidate(
     :type rejections: Counter[str]
     :param candidate_idx: 1-based candidate index for ID formatting.
     :type candidate_idx: int
-    :return: Configured Candidate or None if no pairs were accepted.
+    :return: First Candidate or None if no pairs were accepted.
     :rtype: Candidate or None
     """
-    pairs = collect_candidate_pairs(group, settings, rejections)
-    if not pairs:
-        return None
-    return assemble_candidate(
-        reaction_id=f"R{candidate_idx:03d}",
-        event=group[0],
-        pairs=pairs,
-        n_events=len(group),
+    candidates = build_candidates_from_group(
+        group, settings, rejections, candidate_idx
     )
+    return candidates[0] if candidates else None
 
 
 def process_candidates(
@@ -587,9 +707,10 @@ def process_candidates(
     tally = Counter() if rejections is None else rejections
     candidates: list[Candidate] = []
     for group in groups:
-        cand = build_candidate(group, settings, tally, len(candidates) + 1)
-        if cand is not None:
-            candidates.append(cand)
+        new_cands = build_candidates_from_group(
+            group, settings, tally, len(candidates) + 1
+        )
+        candidates.extend(new_cands)
     return candidates
 
 
@@ -633,7 +754,7 @@ def relax_species(
     """
     attached = attach(fragment, settings)
     res = relax(attached, FREEZE_FMAX_EV_PER_ANG, FREEZE_MAX_STEPS)
-    if not res.converged or state_key(res.atoms) != (key,):
+    if not res.converged or state_key(res.atoms, stereo=True) != (key,):
         return None
     return make_species(key, res.atoms)
 
@@ -651,7 +772,7 @@ def find_fragment_in_atoms(atoms: Atoms, target_key: str) -> Atoms | None:
     """
     graph = connectivity_graph(atoms)
     for frag in fragments(graph):
-        if species_key(graph, frag) == target_key:
+        if species_key(graph, frag, atoms=atoms, stereo=True) == target_key:
             return atoms[frag]
     return None
 
@@ -694,7 +815,7 @@ def collect_species_keys(
     :return: Sorted list of unique canonical species keys.
     :rtype: list[str]
     """
-    needed: set[str] = set(state_key(reactant))
+    needed: set[str] = set(state_key(reactant, stereo=True))
     for cand in candidates:
         needed.update(cand.reactant_keys)
         needed.update(cand.product_keys)
@@ -795,6 +916,7 @@ def compile_candidate_stats(
         "event_groups": len(groups),
         "candidates": len(candidates),
         "species": len(species_map),
+        "reactive_replicates": len({ev.replicate for ev in raw_events}),
     }
     for reason, count in sorted(rejections.items()):
         stats[f"rejected_{reason}"] = count
@@ -807,6 +929,7 @@ def extract_candidate_set(
     min_frames: int,
     dump_fs: float,
     engine_settings: EngineSettings | str | Path,
+    replicate_ids: Sequence[int | tuple[str, int]] | None = None,
 ) -> CandidateSet:
     """
     Extract validated candidates and species map from trajectories.
@@ -821,11 +944,15 @@ def extract_candidate_set(
     :type dump_fs: float
     :param engine_settings: Configuration settings for relaxation engine.
     :type engine_settings: EngineSettings or str or Path
+    :param replicate_ids: Optional custom replicate identity per trajectory.
+    :type replicate_ids: Sequence[int or tuple[str, int]] or None
     :return: Unsaved CandidateSet instance.
     :rtype: CandidateSet
     """
     settings = resolve_engine_settings(engine_settings)
-    raw_events = collect_events(trajectories, min_frames, dump_fs)
+    raw_events = collect_events(
+        trajectories, min_frames, dump_fs, replicate_ids
+    )
     groups = group_by_state_pair(raw_events)
     rejections: Counter[str] = Counter()
     candidates = process_candidates(groups, settings, rejections)
@@ -834,5 +961,5 @@ def extract_candidate_set(
         raw_events, groups, candidates, species_map, rejections
     )
     return CandidateSet(
-        state_key(reactant), species_map, tuple(candidates), stats
+        state_key(reactant, stereo=True), species_map, tuple(candidates), stats
     )

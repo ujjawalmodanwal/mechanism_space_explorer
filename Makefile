@@ -1,10 +1,10 @@
 # Rebuild the analysis from results/: rank every engine, evaluate against
 # the reference, then draw figures and tables.
-#   make figures SYSTEM=hcho_nh3 REFERENCE=dft COMPARE=xtb,mace,aimnet,egret
+#   make figures SYSTEM=hcho_nh3 REFERENCE=dft COMPARE=xtb,mace,aimnet,ani1xnr
 
 SYSTEM ?= hcho_nh3
 REFERENCE ?= dft
-COMPARE ?= xtb,mace,uma,aimnet,egret
+COMPARE ?= xtb,mace,uma,aimnet,ani1xnr
 comma := ,
 ENGINES := $(REFERENCE) $(subst $(comma), ,$(COMPARE))
 

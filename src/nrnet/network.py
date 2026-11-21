@@ -16,6 +16,7 @@ import numpy as np
 __all__ = [
     "KCAL_MOL_EV",
     "ReactionBarrier",
+    "add_bidirectional_barrier_edges",
     "add_reaction_edge",
     "apply_barrier",
     "build_network",
@@ -37,11 +38,20 @@ class ReactionBarrier:
     :type state_b: str
     :param dg_act_ev: Forward activation barrier from state_a in eV.
     :type dg_act_ev: float
+    :param barrierless: Whether the reaction is barrierless.
+    :type barrierless: bool
+    :param source: Origin of candidate reaction ('md' or 'literature').
+    :type source: str
+    :param literature_name: Literature reaction identifier name if applicable.
+    :type literature_name: str or None
     """
 
     state_a: str
     state_b: str
     dg_act_ev: float
+    barrierless: bool = False
+    source: str = "md"
+    literature_name: str | None = None
 
 
 def eyring_rate(dg_act_ev: float, temperature_k: float) -> float:
@@ -66,6 +76,9 @@ def add_reaction_edge(
     target: str,
     ts_ev: float,
     temperature_k: float,
+    barrierless: bool = False,
+    edge_source: str = "md",
+    literature_name: str | None = None,
 ) -> None:
     """
     Add single directed reaction edge with kinetic rate attributes.
@@ -80,6 +93,12 @@ def add_reaction_edge(
     :type ts_ev: float
     :param temperature_k: Reaction temperature in Kelvin.
     :type temperature_k: float
+    :param barrierless: Whether the edge represents a barrierless step.
+    :type barrierless: bool
+    :param edge_source: Provenance of the reaction edge.
+    :type edge_source: str
+    :param literature_name: Literature name if matched.
+    :type literature_name: str or None
     :return: None.
     :rtype: None
     """
@@ -93,7 +112,55 @@ def add_reaction_edge(
         dg_act_ev=dg_act_ev,
         dg_rxn_ev=dg_rxn_ev,
         rate_s=rate_constant,
+        barrierless=barrierless,
+        source=edge_source,
+        literature_name=literature_name,
     )
+
+
+def add_bidirectional_barrier_edges(
+    graph: nx.DiGraph,
+    state_a: str,
+    state_b: str,
+    ts_ev: float,
+    temperature_k: float,
+    barrierless: bool = False,
+    edge_source: str = "md",
+    literature_name: str | None = None,
+) -> None:
+    """
+    Add forward and reverse reaction edges between two states.
+
+    :param graph: Reaction network graph.
+    :type graph: nx.DiGraph
+    :param state_a: Reactant state identifier.
+    :type state_a: str
+    :param state_b: Product state identifier.
+    :type state_b: str
+    :param ts_ev: Transition state energy in eV.
+    :type ts_ev: float
+    :param temperature_k: Reaction temperature in Kelvin.
+    :type temperature_k: float
+    :param barrierless: Whether the edge represents a barrierless step.
+    :type barrierless: bool
+    :param edge_source: Provenance of the reaction edge.
+    :type edge_source: str
+    :param literature_name: Literature name if matched.
+    :type literature_name: str or None
+    :return: None.
+    :rtype: None
+    """
+    for src, dst in ((state_a, state_b), (state_b, state_a)):
+        add_reaction_edge(
+            graph,
+            src,
+            dst,
+            ts_ev,
+            temperature_k,
+            barrierless=barrierless,
+            edge_source=edge_source,
+            literature_name=literature_name,
+        )
 
 
 def apply_barrier(
@@ -111,17 +178,21 @@ def apply_barrier(
     :return: 1 if clamped else 0.
     :rtype: int
     """
-    g_state_a_ev = graph.nodes[barrier.state_a]["g_ev"]
-    g_state_b_ev = graph.nodes[barrier.state_b]["g_ev"]
-    ts_raw_ev = g_state_a_ev + float(barrier.dg_act_ev)
-    ts_ev = max(ts_raw_ev, g_state_a_ev, g_state_b_ev)
-    add_reaction_edge(
-        graph, barrier.state_a, barrier.state_b, ts_ev, temperature_k
+    g_a_ev = graph.nodes[barrier.state_a]["g_ev"]
+    g_b_ev = graph.nodes[barrier.state_b]["g_ev"]
+    ts_raw_ev = g_a_ev + float(barrier.dg_act_ev)
+    ts_ev = max(ts_raw_ev, g_a_ev, g_b_ev)
+    add_bidirectional_barrier_edges(
+        graph,
+        barrier.state_a,
+        barrier.state_b,
+        ts_ev,
+        temperature_k,
+        barrierless=barrier.barrierless,
+        edge_source=barrier.source,
+        literature_name=barrier.literature_name,
     )
-    add_reaction_edge(
-        graph, barrier.state_b, barrier.state_a, ts_ev, temperature_k
-    )
-    return int(ts_ev > ts_raw_ev)
+    return 0 if barrier.barrierless else int(ts_ev > ts_raw_ev)
 
 
 def populate_nodes(graph: nx.DiGraph, state_g_ev: Mapping[str, float]) -> None:

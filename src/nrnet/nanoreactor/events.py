@@ -16,6 +16,7 @@ from nrnet.chem import state_key
 __all__ = [
     "Event",
     "StateRun",
+    "endpoint_index",
     "find_events",
     "merge_adjacent_runs",
     "run_length",
@@ -46,8 +47,8 @@ class Event:
     """
     Reaction event between two consecutive stable states in a trajectory.
 
-    :param replicate: Index of MD replicate where event occurred.
-    :type replicate: int
+    :param replicate: Identifier of MD replicate where event occurred.
+    :type replicate: int or tuple[str, int]
     :param time_fs: Simulation timestamp of event onset in femtoseconds.
     :type time_fs: float
     :param frame_before: Final atomic structure before transition.
@@ -60,7 +61,7 @@ class Event:
     :type state_after: tuple[str, ...]
     """
 
-    replicate: int
+    replicate: int | tuple[str, int]
     time_fs: float
     frame_before: Atoms = field(compare=False)
     frame_after: Atoms = field(compare=False)
@@ -137,12 +138,48 @@ def stable_runs(
     return merge_adjacent_runs(filtered)
 
 
+def endpoint_index(
+    states: Sequence[tuple[str, ...]],
+    run: StateRun,
+    before: bool,
+    settle_frames: int,
+) -> int:
+    """
+    Pick a run's endpoint frame settle_frames away from the crossing.
+
+    A frame right at the crossing often sits on the barrier and relaxes
+    to the other side, which the endpoint check rejects (18 of 21
+    cpd_ma events at 0.01 Eh per atom, 2026-11-18). The frame chosen is
+    the nearest one at or past the target, toward the crossing, that is
+    in the run's own state.
+
+    :param states: State key of every frame.
+    :type states: Sequence[tuple[str, ...]]
+    :param run: The stable run to take the endpoint from.
+    :type run: StateRun
+    :param before: True for the run before the crossing, False after.
+    :type before: bool
+    :param settle_frames: Frames to step away from the crossing.
+    :type settle_frames: int
+    :return: Frame index of the endpoint.
+    :rtype: int
+    """
+    if before:
+        target = max(run.start, run.stop - 1 - settle_frames)
+        order = range(target, run.stop)
+    else:
+        target = min(run.stop - 1, run.start + settle_frames)
+        order = range(target, run.start - 1, -1)
+    return next(i for i in order if states[i] == run.state)
+
+
 def find_events(
     frames: Sequence[Atoms],
-    replicate: int,
+    replicate: int | tuple[str, int],
     min_frames: int,
     dump_fs: float,
     scale: float = 1.2,
+    settle_frames: int = 0,
 ) -> list[Event]:
     """
     Detect reaction events between consecutive stable trajectory runs.
@@ -150,13 +187,15 @@ def find_events(
     :param frames: Sequence of atomic structures along the MD trajectory.
     :type frames: Sequence[Atoms]
     :param replicate: Replicate identifier for the trajectory.
-    :type replicate: int
+    :type replicate: int or tuple[str, int]
     :param min_frames: Minimum lifetime in frames to qualify as stable state.
     :type min_frames: int
     :param dump_fs: Trajectory dumping interval in femtoseconds.
     :type dump_fs: float
     :param scale: Multiplicative scale factor for covalent cutoffs.
     :type scale: float
+    :param settle_frames: Frames between the crossing and each endpoint.
+    :type settle_frames: int
     :return: List of reaction events extracted between consecutive stable runs.
     :rtype: list[Event]
     """
@@ -166,8 +205,12 @@ def find_events(
         Event(
             replicate=replicate,
             time_fs=float(later.start * dump_fs),
-            frame_before=frames[earlier.stop - 1],
-            frame_after=frames[later.start],
+            frame_before=frames[
+                endpoint_index(states, earlier, True, settle_frames)
+            ],
+            frame_after=frames[
+                endpoint_index(states, later, False, settle_frames)
+            ],
             state_before=earlier.state,
             state_after=later.state,
         )

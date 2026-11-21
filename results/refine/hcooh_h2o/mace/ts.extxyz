@@ -1,0 +1,64 @@
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R001 pair_index=2 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g4\", 15]" time_fs=8530.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O        2.31130335      -1.28584383      -0.76719859
+C        1.57725208      -0.38470885      -0.84230505
+O        1.22070937       0.62917341      -1.49101073
+H        0.48053054       0.46198766      -0.42359091
+H        0.62213416      -0.32328034       0.24051142
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R002 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g2\", 28]" time_fs=8235.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+O       -0.58356454      -0.38904686       0.72543107
+C        0.35910085       0.01214228       0.13425947
+O        1.57719633       0.14340098       0.18740438
+H        2.05967322       0.66870684      -2.70762010
+H       -0.10664519       0.51905091      -1.07139735
+O        1.74390055       1.24544462      -1.99915567
+H        0.61214545       0.90325745      -1.67844224
+H        2.03589243       0.83346912      -1.09961203
+5
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R003 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g2\", 21]" time_fs=6220.0 atom_ids="0 1 2 3 4" side=before pbc="F F F"
+O       -0.23789436       0.36444731       0.37922331
+C       -0.91030626       0.57376779      -1.32827524
+O       -0.24500018       0.91207255      -2.18828336
+H        0.42688639      -0.33620192       0.44611133
+H       -1.40071348       0.12070845      -0.36988887
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R004 pair_index=1 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.035/g4\", 36]" time_fs=4440.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+O        1.45203717       0.68556699       0.40726968
+C        0.72214411       0.25364169      -1.18259490
+O        1.28635830       0.63415868      -2.10480090
+H        2.40481469       0.54778146       0.42846456
+H       -0.15771531      -0.42109252      -0.37358894
+O       -0.30652070      -0.80997527       0.80208329
+H       -1.07330342      -0.41501526       1.23074099
+H        0.60455196      -0.15127837       0.93744487
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R005 pair_index=2 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.035/g4\", 19]" time_fs=3175.0 atom_ids="0 1 2 3" side=before pbc="F F F"
+O        0.31662750       0.26841920      -0.53762036
+C        0.97274600      -0.30388187       0.29828812
+O        1.39096973      -1.18211819       0.93529999
+H       -0.50475664      -0.53725929      -1.27521224
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R007 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g6\", 15]" time_fs=6170.0 atom_ids="0 1 2 4" side=before pbc="F F F"
+O       -0.31055094       0.43923386      -0.25929775
+C        0.41777553       0.22514471      -1.17036430
+O        0.72674882      -0.13684629      -2.25637360
+H        1.68435689       0.67268918      -0.63970103
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R008 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.03/g6\", 30]" time_fs=4965.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+O        1.31414936       0.79024857       0.65425863
+C        0.59020884       0.30097660      -0.37054919
+O        1.16076112       0.18995164      -1.53442175
+H        2.23211340       0.81654581       0.34404550
+H       -0.46080792       0.56620016      -0.26621157
+O        0.45683078      -1.41435636      -0.23233619
+H        1.04753176      -1.74235534       0.45847789
+H        1.01889585      -1.02887976      -1.23693906
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R010 pair_index=0 replicate="_JSON [\"runs/sweep/hcooh_h2o/T300_k0.035/g6\", 4]" time_fs=8870.0 atom_ids="0 1 2 3 5 7" side=before pbc="F F F"
+O        0.08554057       0.89568862      -0.41470957
+C        1.56258743       0.34877608      -0.89298142
+O        2.19003301       1.18797603      -0.20037423
+H       -0.42359109       0.21629567       0.04747139
+O        1.65611558      -0.54339527      -1.64312351
+H        1.01156789       1.45708136       0.15460482

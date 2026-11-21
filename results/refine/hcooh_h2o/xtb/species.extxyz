@@ -1,0 +1,67 @@
+5
+Properties=species:S:1:pos:R:3 trans-HCOOH=T +=T H2O,=T hydrogen-bonded,=T GFN2-xTB=T minimum=T charge=0 spin=1 key=CH2O2-2a71d22e smiles=O=CO inchikey=BDAGIHXWWSANSR-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        0.79617149      -0.46736263       0.48391589
+C       -0.26146942       0.01704811      -0.14471228
+O       -0.23421251       0.72775910      -1.10213869
+H        1.61869949      -0.16680432       0.06062785
+H       -1.17865038      -0.33537001       0.35136892
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH2O3-e08c66ff smiles=O=C(O)O inchikey=BVKZGUZCCUSVTD-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        1.83623213       0.85817991      -0.62939030
+C        0.74874755       0.06412819      -0.54244015
+O       -0.30050532       0.31368336      -1.04267073
+H        1.64540554       1.65293278      -1.14627093
+O        1.01097294      -1.02049689       0.16956031
+H        1.92831891      -1.01553423       0.48123268
+7
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CH3O3-f0971681 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O        0.80577214       1.70828134      -0.10196716
+C        0.66214312       0.43871636      -0.61419569
+O        1.74985806      -0.37623760      -0.39727961
+H        1.73857051       1.85723268       0.08893674
+H        1.43884278      -1.28395241      -0.30882028
+O       -0.54426600      -0.15028625      -0.31068094
+H       -1.15182645       0.53505933      -0.01093716
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH4O3-1b786c83 smiles=OC(O)O inchikey=RLAHWVDQYNDAGG-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O       -0.11337509       0.93511378       0.19667256
+C        0.57503467       0.34788663      -0.83405804
+O        1.70897446       1.12500227      -1.07853654
+H        0.52501930       1.34252939       0.79742007
+H       -0.09414934       0.30342793      -1.70512405
+O        0.92456677      -0.96945028      -0.57574692
+H        1.38182414      -1.02602634       0.27400444
+H        2.18935636       0.78002640      -1.83810394
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CHO2-063d45b9 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O       -0.30117199       0.43647914      -0.27109005
+C        0.51876901       0.26106712      -1.12729392
+O        0.71880601      -0.13256206      -2.24147742
+H        1.58192727       0.63523726      -0.68587532
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CHO2-f92468da smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O        0.13849918       1.27059398      -0.65566189
+C        0.48591430       0.79725695       0.53006345
+O        1.19219719      -0.12048280       0.80371802
+H       -0.44983231       2.03588606      -0.58622588
+2
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CO-72c368ed smiles="[C-]#[O+]" inchikey=UGFAIRIUMAVXCW-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C        0.69647137      -1.67598141       0.29826058
+O       -0.02469703      -1.78168185      -0.56173889
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CO2-9d2ea55c smiles=O=C=O inchikey=CURLTUGMZLYLDI-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        2.89638801       1.16186226      -1.83995275
+C        2.60491641       0.08860502      -1.57360463
+O        2.31343277      -0.98468788      -1.30743040
+1
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=H-34ba85c0 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+H       -1.26107849      -8.02142851      -4.15793213
+2
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=H2-212475fb smiles="[H][H]" inchikey=UFHFLCQGNIYNRP-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+H       -3.15487791       2.26906490       0.04461994
+H       -2.78519672       2.28658804      -0.63804882
+3
+Properties=species:S:1:pos:R:3 trans-HCOOH=T +=T H2O,=T hydrogen-bonded,=T GFN2-xTB=T minimum=T charge=0 spin=1 key=H2O-2ebfe80f smiles=O inchikey=XLYOFNOQVPJJNP-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        2.53448428       0.68543392      -1.17367953
+H        1.71856002       1.06875259      -1.50136893
+H        2.96732992       0.26059520      -1.91689320

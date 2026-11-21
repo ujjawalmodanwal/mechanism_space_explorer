@@ -25,10 +25,8 @@ search:
   imaginary_threshold_cm: -50.0
   # Displacement step in Å along imaginary normal mode for endpoint check.
   confirm_step_ang: 0.1
-
-thermo:
-  # Standard thermochemical temperatures in Kelvin.
-  temperatures_k: [298.15, 600.0]
+  # Maximum elevation above endpoints for a barrierless step in eV.
+  barrierless_tol_ev: 0.04
 
 rank:
   # Observation time for R4 yields, one hour, decision D7.

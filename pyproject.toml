@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "nrnet"
 version = "0.1.0"
-description = "Nanoreactor reaction networks with ML potentials."
+description = "Mechanism Space Explorer: reaction networks with ML potentials."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -25,10 +25,11 @@ nrnet = "nrnet.cli:main"
 [project.optional-dependencies]
 xtb = ["tblite"]
 mace = [
-    "mace-torch",  # MACE-OMol25 and Egret-1
+    "mace-torch",  # MACE-OMol25
 ]
 uma = ["fairchem-core"]
 aimnet = ["aimnet[ase]"]
+ani = ["torchani"]  # ANI-1xnr
 
 [dependency-groups]
 dev = [
@@ -43,6 +44,9 @@ conflicts = [
     [{ extra = "mace" }, { extra = "uma" }],
     [{ extra = "mace" }, { extra = "aimnet" }],
     [{ extra = "uma" }, { extra = "aimnet" }],
+    [{ extra = "mace" }, { extra = "ani" }],
+    [{ extra = "uma" }, { extra = "ani" }],
+    [{ extra = "aimnet" }, { extra = "ani" }],
 ]
 
 [tool.hatch.build.targets.wheel]

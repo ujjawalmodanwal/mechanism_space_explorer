@@ -1,0 +1,10 @@
+key,formula,smiles,inchikey14,runs_with,in_frozen_sets,first_run,first_frame
+CH2O2-2a71d22e,CH2O2,O=CO,BDAGIHXWWSANSR,595,True,runs/sweep/hcooh/T300_k0.03/g1/rep_0/xtb.trj,200
+CO2-9d2ea55c,CO2,O=C=O,CURLTUGMZLYLDI,476,True,runs/sweep/hcooh/T300_k0.03/g1/rep_0/xtb.trj,600
+H2-212475fb,H2,[H][H],UFHFLCQGNIYNRP,465,True,runs/sweep/hcooh/T300_k0.03/g1/rep_0/xtb.trj,600
+H2O-2ebfe80f,H2O,O,XLYOFNOQVPJJNP,26,True,runs/sweep/hcooh/T300_k0.03/g1/rep_29/xtb.trj,1600
+CO-72c368ed,CO,[C-]#[O+],UGFAIRIUMAVXCW,26,True,runs/sweep/hcooh/T300_k0.03/g1/rep_29/xtb.trj,1600
+H-34ba85c0,H,,,24,True,runs/sweep/hcooh/T300_k0.03/g2/rep_3/xtb.trj,421
+CHO2-063d45b9,CHO2,,,6,True,runs/sweep/hcooh/T300_k0.03/g2/rep_3/xtb.trj,421
+CH2O2-ea347982,CH2O2,[H]/[O+]=[C-]\O,VZOMUUKAVRPMBY,2,False,runs/sweep/hcooh/T300_k0.03/g1/rep_39/xtb.trj,1638
+CHO2-f92468da,CHO2,,,2,True,runs/sweep/hcooh/T300_k0.03/g2/rep_45/xtb.trj,1827

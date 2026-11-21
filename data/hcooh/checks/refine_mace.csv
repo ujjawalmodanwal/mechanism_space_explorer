@@ -1,0 +1,5 @@
+reaction_id,temperature_k,source,literature_name,n_events,reactants,products,status,route,seed_engine,attempts,imaginary_cm,dg_act_fwd_kcal,dg_act_rev_kcal,dg_rxn_kcal,note
+R001,1000.0,md,decarboxylation,68,O=CO,O=C=O + [H][H],confirmed,seed,xtb,confirmed;endpoint_mismatch;confirmed;confirmed,-2321.53,67.8,97.73,-29.93,
+R002,1000.0,md,,25,O=CO,[C-]#[O+] + O,confirmed,seed,xtb,confirmed;endpoint_mismatch;confirmed;endpoint_mismatch,-1656.67,63.41,90.46,-27.05,
+R003,1000.0,md,,4,CHO2-f92468da,O=C=O + H-34ba85c0,confirmed,band,,confirmed;confirmed;confirmed;confirmed,-2416.32,27.23,46.38,-19.14,
+R004,1000.0,md,,1,CHO2-063d45b9,O=C=O + H-34ba85c0,confirmed,seed,xtb,confirmed;confirmed,-1507.66,0.82,33.94,-33.12,

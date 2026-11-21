@@ -80,11 +80,15 @@ __all__ = [
     "calculate_ts_free_energies",
     "candidate_signature",
     "check_relaxed_state",
+    "confirmed_free_energy",
     "evaluate_species_modes",
     "execute_reaction_search",
     "execute_species_refine",
+    "kept_result",
     "load_job_context",
     "load_job_settings",
+    "load_ranking_temperatures",
+    "load_refine_runtime",
     "load_seeds",
     "load_thermo_temperatures",
     "process_species_modes",
@@ -104,6 +108,7 @@ __all__ = [
     "relax_and_process_species",
     "reuse_confirmed_reaction",
     "run_refine_stages",
+    "select_candidates",
     "update_confirmed_ts",
 ]
 
@@ -138,6 +143,12 @@ class RefineJob:
     :type context: RunContext
     :param seeds: Transition state guesses keyed by reaction ID.
     :type seeds: dict[str, TSSeed]
+    :param retry: Status strings to re-search instead of skipping.
+    :type retry: tuple[str, ...]
+    :param reaction_ids: Optional subset of reaction IDs to refine.
+    :type reaction_ids: tuple[str, ...] or None
+    :param skip_species: Whether to skip refining frozen species minimums.
+    :type skip_species: bool
     """
 
     paths: RefinePaths
@@ -147,20 +158,38 @@ class RefineJob:
     temperatures_k: tuple[float, ...]
     context: RunContext
     seeds: dict[str, TSSeed]
+    retry: tuple[str, ...] = ()
+    reaction_ids: tuple[str, ...] | None = None
+    skip_species: bool = False
 
 
 def load_thermo_temperatures(path: str | Path) -> list[float]:
     """
-    Load thermochemical temperatures from search YAML configuration.
+    Load ranking temperatures from system YAML configuration.
 
-    :param path: Path to search YAML configuration file.
+    :param path: Path to system YAML configuration file.
     :type path: str or Path
     :return: List of evaluation temperatures in Kelvin.
     :rtype: list[float]
+    :raises ValueError: If ranking.temperatures_k key is missing.
     """
-    with Path(path).open("r", encoding="utf-8") as file:
+    file_path = Path(path)
+    if file_path.is_dir():
+        file_path = file_path / "system.yaml"
+    with file_path.open("r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
-    return [float(val) for val in data["thermo"]["temperatures_k"]]
+    if (
+        not isinstance(data, dict)
+        or "ranking" not in data
+        or not isinstance(data["ranking"], dict)
+        or "temperatures_k" not in data["ranking"]
+        or data["ranking"]["temperatures_k"] is None
+    ):
+        raise ValueError(f"Missing ranking.temperatures_k in {file_path}")
+    return [float(val) for val in data["ranking"]["temperatures_k"]]
+
+
+load_ranking_temperatures = load_thermo_temperatures
 
 
 def build_refine_context(
@@ -216,6 +245,7 @@ def read_species_keys(path: Path) -> set[str]:
 
 def read_reaction_records(
     path: Path,
+    retry: Sequence[str] = (),
 ) -> tuple[
     set[str], dict[tuple[tuple[str, ...], tuple[str, ...]], dict[str, Any]]
 ]:
@@ -224,16 +254,22 @@ def read_reaction_records(
 
     :param path: Path to reactions JSONL file.
     :type path: Path
+    :param retry: Status strings to re-search instead of skipping.
+    :type retry: Sequence[str]
     :return: Tuple of completed reaction IDs and confirmed rows by signature.
     :rtype: tuple[set[str], dict]
     """
+    retry_set = set(retry)
     done_ids: set[str] = set()
     confirmed: dict[
         tuple[tuple[str, ...], tuple[str, ...]], dict[str, Any]
     ] = {}
-    for row in read_jsonl(path):
-        done_ids.add(str(row["reaction_id"]))
-        if row.get("status") == TSStatus.confirmed.value and "signature" in row:
+    for rxn_id, row in latest_rows(path, "reaction_id").items():
+        status = str(row.get("status", ""))
+        if status in retry_set:
+            continue
+        done_ids.add(rxn_id)
+        if status == TSStatus.confirmed.value and "signature" in row:
             sig_raw = row["signature"]
             sig = tuple(sorted([tuple(sig_raw[0]), tuple(sig_raw[1])]))
             confirmed[sig] = row
@@ -420,7 +456,7 @@ def check_relaxed_state(
     :return: True if state key matches, False if endpoint changed.
     :rtype: bool
     """
-    if state_key(res.atoms) != (key,):
+    if state_key(res.atoms, stereo=True) != (key,):
         rec.status = STATUS_ENDPOINT_CHANGED
         rec.force_calls = res.steps
         row = {
@@ -683,6 +719,58 @@ def calculate_ts_free_energies(
     }
 
 
+def confirmed_free_energy(res: TSResult, temperature_k: float) -> float:
+    """
+    Compute the Gibbs free energy of a confirmed saddle at one temperature.
+
+    :param res: Confirmed TS result with geometry and frequencies.
+    :type res: TSResult
+    :param temperature_k: Evaluation temperature in Kelvin.
+    :type temperature_k: float
+    :return: Gibbs free energy in eV.
+    :rtype: float
+    """
+    assert res.ts_atoms is not None and res.ts_energy_ev is not None
+    vib = res.vibrational_cm or ()
+    g_map = calculate_ts_free_energies(
+        res.ts_atoms, res.ts_energy_ev, vib, [temperature_k]
+    )
+    return g_map[temperature_label(temperature_k)]
+
+
+def kept_result(results: Sequence[TSResult], temperature_k: float) -> TSResult:
+    """
+    Choose the attempt a reaction record keeps.
+
+    The confirmed saddle with the lowest G at the first ranking
+    temperature wins, because pairs can confirm different saddles between
+    the same ends. A confirmed saddle beats a barrierless band: the saddle
+    passed the frequency and endpoint checks, while a band reads as
+    barrierless whenever its own product end lies high. Without a saddle,
+    a barrierless attempt wins; otherwise the last attempt.
+
+    :param results: TS results of every attempt.
+    :type results: Sequence[TSResult]
+    :param temperature_k: First ranking temperature in Kelvin.
+    :type temperature_k: float
+    :return: The attempt to record.
+    :rtype: TSResult
+    """
+    confirmed = [
+        res
+        for res in results
+        if res.status == TSStatus.confirmed and res.ts_atoms is not None
+    ]
+    if not confirmed:
+        statuses = [res.status for res in results]
+        if TSStatus.barrierless in statuses:
+            return results[statuses.index(TSStatus.barrierless)]
+        return results[-1]
+    return min(
+        confirmed, key=lambda res: confirmed_free_energy(res, temperature_k)
+    )
+
+
 def reaction_energy_fields(last_res: TSResult) -> dict[str, Any]:
     """
     Extract electronic and complex energy fields from TSResult.
@@ -729,6 +817,8 @@ def reaction_meta_fields(
         "pair_index": last_res.pair_index,
         "route": last_res.route.value,
         "seed_engine": seed_engine,
+        "source": candidate.source,
+        "literature_name": candidate.literature_name,
     }
 
 
@@ -825,13 +915,15 @@ def record_reaction_outcome(
     :return: Serialized reaction record dictionary.
     :rtype: dict[str, Any]
     """
-    last_res = results[-1]
+    kept = kept_result(results, temperatures_k[0])
     attempts = [r.status.value for r in results]
     force_calls = sum(r.force_calls for r in results)
-    row = build_reaction_row(candidate, last_res, attempts, force_calls, seed)
-    update_confirmed_ts(
-        row, candidate, last_res, temperatures_k, paths.ts_extxyz
-    )
+    row = build_reaction_row(candidate, kept, attempts, force_calls, seed)
+    row["attempt_ts_energy_ev"] = [
+        r.ts_energy_ev if r.status == TSStatus.confirmed else None
+        for r in results
+    ]
+    update_confirmed_ts(row, candidate, kept, temperatures_k, paths.ts_extxyz)
     append_jsonl(paths.reactions_jsonl, row)
     return row
 
@@ -855,12 +947,12 @@ def execute_reaction_search(
         results = search_candidate(
             candidate, job.engine_settings, job.search_settings, seed
         )
-        rec.status = results[-1].status.value
         rec.force_calls = sum(r.force_calls for r in results)
-        rec.note = results[-1].note
-        return record_reaction_outcome(
+        row = record_reaction_outcome(
             candidate, results, job.temperatures_k, job.paths, seed
         )
+        rec.status, rec.note = row["status"], row["note"]
+        return row
 
 
 def reuse_confirmed_reaction(
@@ -883,6 +975,8 @@ def reuse_confirmed_reaction(
     reused = dict(earlier_row)
     reused["reaction_id"] = candidate.reaction_id
     reused["reused_from"] = earlier_row["reaction_id"]
+    reused["source"] = candidate.source
+    reused["literature_name"] = candidate.literature_name
     append_jsonl(reactions_path, reused)
     return reused
 
@@ -1050,22 +1144,28 @@ def load_job_settings(
     engines_path: str | Path,
     search_path: str | Path,
     engine: str,
+    system_yaml: str | Path | None = None,
 ) -> tuple[EngineSettings, SearchSettings, tuple[float, ...]]:
     """
     Load engine settings, search settings, and temperatures for a job.
 
     :param engines_path: Path to engines YAML configuration.
     :type engines_path: str or Path
-    :param search_path: Path to search and thermo YAML configuration.
+    :param search_path: Path to search YAML configuration.
     :type search_path: str or Path
     :param engine: Chemistry engine identifier.
     :type engine: str
+    :param system_yaml: Path to system YAML configuration file.
+    :type system_yaml: str or Path or None
     :return: Tuple of engine settings, search settings, and temperatures.
     :rtype: tuple[EngineSettings, SearchSettings, tuple[float, ...]]
+    :raises ValueError: If system_yaml is not provided.
     """
     esettings = load_engine_settings(engines_path, engine)
     ssettings = load_search_settings(search_path)
-    temps = tuple(load_thermo_temperatures(search_path))
+    if system_yaml is None:
+        raise ValueError("system_yaml is required to load ranking temperatures")
+    temps = tuple(load_thermo_temperatures(system_yaml))
     return esettings, ssettings, temps
 
 
@@ -1110,6 +1210,78 @@ def load_job_context(
     )
 
 
+def load_refine_runtime(
+    paths: RefinePaths,
+    system: str,
+    engine: str,
+    systems_dir: str | Path,
+    engines_path: str | Path,
+    search_path: str | Path,
+) -> tuple[EngineSettings, SearchSettings, tuple[float, ...], RunContext]:
+    """
+    Load settings, ranking temperatures, and runtime context for refinement.
+
+    :param paths: Refinement output paths.
+    :type paths: RefinePaths
+    :param system: Chemical system identifier.
+    :type system: str
+    :param engine: Chemistry engine identifier.
+    :type engine: str
+    :param systems_dir: Systems configuration base directory.
+    :type systems_dir: str or Path
+    :param engines_path: Path to engines YAML configuration.
+    :type engines_path: str or Path
+    :param search_path: Path to search and thermo YAML configuration.
+    :type search_path: str or Path
+    :return: Engine settings, search settings, temperatures, and context.
+    :rtype: tuple[EngineSettings, SearchSettings, tuple[float, ...], RunContext]
+    """
+    sys_yaml = Path(systems_dir) / system / "system.yaml"
+    eset, sset, temps = load_job_settings(
+        engines_path, search_path, engine, system_yaml=sys_yaml
+    )
+    ctx = load_job_context(
+        paths,
+        system,
+        engine,
+        eset,
+        systems_dir,
+        engines_path,
+        search_path,
+    )
+    return eset, sset, temps, ctx
+
+
+def select_candidates(
+    candidates: Sequence[Candidate],
+    reaction_ids: Sequence[str] | None,
+) -> list[Candidate]:
+    """
+    Filter candidates by reaction identifier while preserving frozen order.
+
+    :param candidates: Sequence of candidate reactions to filter.
+    :type candidates: Sequence[Candidate]
+    :param reaction_ids: Reaction identifiers to retain, or None for all.
+    :type reaction_ids: Sequence[str] or None
+    :return: Filtered list of candidate reactions in frozen order.
+    :rtype: list[Candidate]
+    :raises ValueError: If any requested reaction identifier is not found.
+    """
+    if reaction_ids is None:
+        return list(candidates)
+    available_ids = {cand.reaction_id for cand in candidates}
+    missing_ids = [
+        rxn_id for rxn_id in reaction_ids if rxn_id not in available_ids
+    ]
+    if missing_ids:
+        missing_names = ", ".join(dict.fromkeys(missing_ids))
+        raise ValueError(
+            f"Reaction IDs not found in candidate set: {missing_names}"
+        )
+    target_ids = set(reaction_ids)
+    return [cand for cand in candidates if cand.reaction_id in target_ids]
+
+
 def build_refine_job(
     system: str,
     engine: str,
@@ -1119,6 +1291,9 @@ def build_refine_job(
     engines_path: str | Path,
     search_path: str | Path,
     seed_engine: str | None = None,
+    retry: Sequence[str] = (),
+    reactions: Sequence[str] | None = None,
+    skip_species: bool = False,
 ) -> RefineJob:
     """
     Assemble complete refinement job including configuration and seeds.
@@ -1139,24 +1314,36 @@ def build_refine_job(
     :type search_path: str or Path
     :param seed_engine: Identifier of engine used for TS seeds, or None.
     :type seed_engine: str or None
+    :param retry: Status strings to re-search instead of skipping.
+    :type retry: Sequence[str]
+    :param reactions: Specific reaction IDs to refine, or None for all.
+    :type reactions: Sequence[str] or None
+    :param skip_species: Whether to skip refining frozen species minimums.
+    :type skip_species: bool
     :return: Configured RefineJob instance.
     :rtype: RefineJob
     """
     paths = make_refine_paths(results_dir, system, engine)
     paths.out_dir.mkdir(parents=True, exist_ok=True)
     cset = load_candidates(Path(candidates_dir) / system)
-    eset, sset, temps = load_job_settings(engines_path, search_path, engine)
-    ctx = load_job_context(
-        paths,
-        system,
-        engine,
-        eset,
-        systems_dir,
-        engines_path,
-        search_path,
+    rxn_ids = tuple(reactions) if reactions is not None else None
+    select_candidates(cset.candidates, rxn_ids)
+    eset, sset, temps, ctx = load_refine_runtime(
+        paths, system, engine, systems_dir, engines_path, search_path
     )
     seeds = load_seeds(results_dir, system, seed_engine)
-    return RefineJob(paths, cset, eset, sset, temps, ctx, seeds)
+    return RefineJob(
+        paths,
+        cset,
+        eset,
+        sset,
+        temps,
+        ctx,
+        seeds,
+        tuple(retry),
+        rxn_ids,
+        skip_species,
+    )
 
 
 def run_refine_stages(job: RefineJob) -> None:
@@ -1168,12 +1355,16 @@ def run_refine_stages(job: RefineJob) -> None:
     :return: None.
     :rtype: None
     """
-    done_keys = read_species_keys(job.paths.species_jsonl)
-    done_ids, confirmed = read_reaction_records(job.paths.reactions_jsonl)
-    refine_species_stage(job.candidate_set.species, done_keys, job)
-    refine_reaction_stage(
-        job.candidate_set.candidates, done_ids, confirmed, job
+    if not job.skip_species:
+        done_keys = read_species_keys(job.paths.species_jsonl)
+        refine_species_stage(job.candidate_set.species, done_keys, job)
+    done_ids, confirmed = read_reaction_records(
+        job.paths.reactions_jsonl, job.retry
     )
+    selected = select_candidates(
+        job.candidate_set.candidates, job.reaction_ids
+    )
+    refine_reaction_stage(selected, done_ids, confirmed, job)
 
 
 def refine(
@@ -1185,6 +1376,9 @@ def refine(
     engines_path: str | Path = DEFAULT_ENGINES_CONFIG,
     search_path: str | Path = DEFAULT_SEARCH_CONFIG,
     seed_engine: str | None = None,
+    retry: Sequence[str] = (),
+    reactions: Sequence[str] | None = None,
+    skip_species: bool = False,
 ) -> None:
     """
     Refine all frozen species and candidate reactions with an engine.
@@ -1205,6 +1399,12 @@ def refine(
     :type search_path: str or Path
     :param seed_engine: Identifier of engine used for TS seeds, or None.
     :type seed_engine: str or None
+    :param retry: Status strings to re-search instead of skipping.
+    :type retry: Sequence[str]
+    :param reactions: Specific reaction IDs to refine, or None for all.
+    :type reactions: Sequence[str] or None
+    :param skip_species: Whether to skip refining frozen species minimums.
+    :type skip_species: bool
     :return: None.
     :rtype: None
     """
@@ -1217,5 +1417,8 @@ def refine(
         engines_path,
         search_path,
         seed_engine,
+        retry,
+        reactions=reactions,
+        skip_species=skip_species,
     )
     run_refine_stages(job)

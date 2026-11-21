@@ -1,0 +1,86 @@
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=0 replicate=0 time_fs=13160.0 atom_ids="0 1 2" side=before pbc="F F F"
+C        0.24247810       1.48465687       0.70556947
+O        0.99158949       0.57393981       0.74892498
+H        0.14211472       2.22786235      -0.09492101
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=0 replicate=0 time_fs=13160.0 atom_ids="0 1 2" side=after pbc="F F F"
+C        1.20096685       0.97095552       0.44276882
+O        1.33331202       1.94779543       0.98974989
+H       -1.62229093      -0.94580507       2.99058473
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=1 replicate=12 time_fs=16340.0 atom_ids="0 1 3" side=before pbc="F F F"
+C       -0.55890954       0.27474252       1.48290066
+O       -0.76122144      -0.67214981       0.80810968
+H       -0.11447765       1.22935580       1.17345132
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=1 replicate=12 time_fs=16340.0 atom_ids="0 1 3" side=after pbc="F F F"
+C       -0.22161530      -0.05343002       1.14603755
+O       -0.80821526      -1.00309192       0.98807085
+H       -2.71024305       2.77605720       1.81506733
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=2 replicate=14 time_fs=12290.0 atom_ids="0 1 3" side=before pbc="F F F"
+C       -0.52723676       0.68226249       0.01400922
+O        0.15007976       0.27174055      -0.86088244
+H       -1.57900570       0.44034262       0.21095508
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=2 reaction_id=R001 pair_index=2 replicate=14 time_fs=12290.0 atom_ids="0 1 3" side=after pbc="F F F"
+C       -0.82639529       0.09257899       0.67093124
+O       -0.66191697       0.70017342      -0.26435340
+H       -2.58707230      -4.38171027       1.54918254
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R002 pair_index=0 replicate=1 time_fs=1580.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+C        0.48091145       0.49732962       0.23969264
+O        0.47279662       0.22611877      -0.92327701
+H        0.12006275       1.46484708       0.62625470
+H        0.84547673      -0.18843308       1.01986794
+N       -0.61011704       0.34866025       3.34086039
+H       -0.67726178       1.35478608       3.43560941
+H       -1.55402118      -0.01545530       3.28828118
+H       -0.20091999      -0.00755475       4.19620656
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R002 pair_index=0 replicate=1 time_fs=1580.0 atom_ids="0 1 2 3 4 5 6 7" side=after pbc="F F F"
+C       -0.49825380       0.08693887       0.73872868
+O        0.66412838       0.42404461       0.03917004
+H       -1.37924616       0.53976144       0.23189100
+H       -0.58400618      -1.00113870       0.67298438
+N       -0.38951367       0.46516066       2.13019704
+H       -0.56377114       1.45617799       2.25885813
+H        0.91113053       1.33057755       0.25812082
+H       -1.03556125      -0.04889158       2.71306338
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R003 pair_index=0 replicate=1 time_fs=12830.0 atom_ids="0 1 2 3 4 5 6 7" side=before pbc="F F F"
+C       -0.60242039      -1.08710966       1.65746382
+O        1.24416397       1.85992619      -0.01666252
+H       -1.08585208      -2.08778580       1.60452265
+H        1.38029483       2.72476253      -0.41024837
+N       -0.35744062      -0.65505947       0.46201054
+H       -0.55815494      -1.13437194      -0.42254553
+H        1.72100257       1.84774268       0.81743481
+H        0.08496943       0.25063887       0.34029076
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R003 pair_index=0 replicate=1 time_fs=12830.0 atom_ids="0 1 2 3 4 5 6 7" side=after pbc="F F F"
+C        1.92136002       0.98593106       0.81299501
+O        1.20335992       0.11183681       1.19196389
+H        1.53592565       1.94427020       0.42622943
+H        3.02062521       0.90556099       0.81719996
+N       -2.44536827      -0.39831811      -0.21547749
+H       -2.29637573      -1.02061435      -1.00104926
+H       -1.58458990      -0.37484228       0.32028683
+H       -2.60369006       0.53095732      -0.58834018
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R004 pair_index=0 replicate=30 time_fs=17390.0 atom_ids="0 1 3 4 6 7" side=before pbc="F F F"
+C       -0.11666085       0.13420095       0.41016633
+O        1.13743450       0.46781350       0.79288587
+H       -0.23381208      -0.83469670      -0.07042401
+N       -1.13074401       0.84133304       0.56204565
+H       -0.95265050       1.73505566       1.01451346
+H        1.78259422      -0.21720416       0.58662950
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 reaction_id=R004 pair_index=0 replicate=30 time_fs=17390.0 atom_ids="0 1 3 4 6 7" side=after pbc="F F F"
+C       -0.09270661       0.16136495       0.33923965
+O       -0.23489719       0.08432720       1.53012852
+H       -0.36833630      -0.65297484      -0.35533670
+N        0.40767253       1.22890134      -0.31068643
+H        0.54195916       1.23811722      -1.30552554
+H        0.71219701       2.02534988       0.22636110

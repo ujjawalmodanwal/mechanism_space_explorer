@@ -1,0 +1,67 @@
+5
+Properties=species:S:1:pos:R:3 trans-HCOOH=T +=T H2O,=T hydrogen-bonded,=T GFN2-xTB=T minimum=T charge=0 spin=1 key=CH2O2-2a71d22e smiles=O=CO inchikey=BDAGIHXWWSANSR-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        0.80744807      -0.48022786       0.50054005
+C       -0.26284350       0.01316818      -0.13924514
+O       -0.21663174       0.72483677      -1.09868970
+H        1.59528594      -0.15088009       0.03995447
+H       -1.18272010      -0.33162674       0.34650201
+6
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH2O3-e08c66ff smiles=O=C(O)O inchikey=BVKZGUZCCUSVTD-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        1.85834218       0.85593378      -0.62004757
+C        0.75762320       0.07402790      -0.54509026
+O       -0.29556004       0.32265544      -1.04589576
+H        1.61564866       1.63046514      -1.14404782
+O        1.00817649      -1.02440099       0.17079357
+H        1.92494125      -1.00578815       0.47430872
+7
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CH3O3-f0971681 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O        1.30077405       1.54255745       0.17253750
+C        0.93899927       0.43689668      -0.53161943
+O        1.59780885      -0.63157908      -0.01204278
+H        0.86029202       2.29846608      -0.23065251
+H        1.26427530      -1.41840696      -0.45716821
+O       -0.40799211       0.26753921      -0.73061925
+H       -0.85506323       0.23334012       0.13462045
+8
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CH4O3-1b786c83 smiles=OC(O)O inchikey=RLAHWVDQYNDAGG-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        0.05115935       0.76290715       0.40718905
+C        0.61478770       0.30665215      -0.77823929
+O        1.76249969       1.09074971      -0.99316527
+H        0.31809665       1.68190952       0.52201138
+H       -0.07781935       0.39695807      -1.62092334
+O        0.89878506      -1.03970560      -0.66542595
+H        1.35335422      -1.16346226       0.17882687
+H        2.17638791       0.80250110      -1.81374585
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CHO2-063d45b9 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O       -0.35879303       0.42788252      -0.26225712
+C        0.50543346       0.28408682      -1.06776464
+O        0.77242608      -0.11283153      -2.21468207
+H        1.59926393       0.60108361      -0.78103287
+4
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=CHO2-f92468da smiles=None inchikey=None multiplicity=2 pbc="F F F"
+O        0.14711090       1.26050973      -0.67168218
+C        0.47965453       0.80634391       0.54258389
+O        1.17895202      -0.10394421       0.78633262
+H       -0.43893909       2.02034476      -0.56534063
+2
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CO-72c368ed smiles="[C-]#[O+]" inchikey=UGFAIRIUMAVXCW-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+C        0.69552623      -1.67611994       0.29713349
+O       -0.02375189      -1.78154332      -0.56061180
+3
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=CO2-9d2ea55c smiles=O=C=O inchikey=CURLTUGMZLYLDI-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        2.90014117       1.17568150      -1.84336980
+C        2.60491815       0.08861262      -1.57362910
+O        2.30967787      -0.99851473      -1.30398889
+1
+Properties=species:S:1:pos:R:3 charge=0 spin=2 key=H-34ba85c0 smiles=None inchikey=None multiplicity=2 pbc="F F F"
+H       -1.26107849      -8.02142851      -4.15793213
+2
+Properties=species:S:1:pos:R:3 charge=0 spin=1 key=H2-212475fb smiles="[H][H]" inchikey=UFHFLCQGNIYNRP-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+H       -3.14640852       2.26946635       0.02898001
+H       -2.79366611       2.28618659      -0.62240889
+3
+Properties=species:S:1:pos:R:3 trans-HCOOH=T +=T H2O,=T hydrogen-bonded,=T GFN2-xTB=T minimum=T charge=0 spin=1 key=H2O-2ebfe80f smiles=O inchikey=XLYOFNOQVPJJNP-UHFFFAOYSA-N multiplicity=1 pbc="F F F"
+O        2.53822250       0.68583181      -1.16325940
+H        1.72439121       1.06356864      -1.50914813
+H        2.95776052       0.26538126      -1.91953412

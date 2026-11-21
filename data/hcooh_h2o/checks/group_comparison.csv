@@ -1,0 +1,9 @@
+reaction,main_events,check_events
+O=CO + O  <>  [C-]#[O+] + O + O,19,5
+O=CO + O  <>  O=C=O + [H][H] + O,6,5
+O=CO + O  <>  OC(O)O,7,4
+CHO2-f92468da + H-34ba85c0 + O  <>  O=C=O + H-34ba85c0 + H-34ba85c0 + O,3,1
+O=CO + O  <>  O=C(O)O + [H][H],3,0
+CHO2-063d45b9 + H-34ba85c0 + O  <>  O=C=O + H-34ba85c0 + H-34ba85c0 + O,0,1
+O=C(O)O + H-34ba85c0 + H-34ba85c0  <>  CH3O3-f0971681 + H-34ba85c0,1,0
+O=C(O)O + [H][H]  <>  O=C=O + [H][H] + O,0,1
