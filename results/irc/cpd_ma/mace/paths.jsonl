@@ -1,0 +1,2 @@
+{"reaction_id": "R008", "ok": true, "keep_going": false, "inner_failures": 0, "forward_converged": true, "forward_steps": 36, "reverse_converged": true, "reverse_steps": 31, "n_points": 67, "ts_index": 30, "peak_index": 30, "ends_match": true, "wall_s": 98.2}
+{"reaction_id": "R038", "ok": true, "keep_going": false, "inner_failures": 0, "forward_converged": true, "forward_steps": 35, "reverse_converged": true, "reverse_steps": 30, "n_points": 65, "ts_index": 29, "peak_index": 29, "ends_match": true, "wall_s": 84.3}

@@ -1,0 +1,11 @@
+{"reaction_id": "R001", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 5.8}
+{"reaction_id": "R003", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 2.2}
+{"reaction_id": "R004", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 2.0}
+{"reaction_id": "R006", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 1.6}
+{"reaction_id": "R007", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 0.8}
+{"reaction_id": "R013", "ok": true, "forward_converged": true, "forward_steps": 34, "reverse_converged": true, "reverse_steps": 34, "n_points": 68, "ts_index": 33, "peak_index": 33, "ends_match": true, "wall_s": 3.6}
+{"reaction_id": "R001", "ok": true, "keep_going": true, "inner_failures": 5, "forward_converged": true, "forward_steps": 11, "reverse_converged": true, "reverse_steps": 20, "n_points": 31, "ts_index": 19, "peak_index": 19, "ends_match": true, "wall_s": 9.4}
+{"reaction_id": "R003", "ok": true, "keep_going": true, "inner_failures": 15, "forward_converged": true, "forward_steps": 54, "reverse_converged": true, "reverse_steps": 31, "n_points": 85, "ts_index": 30, "peak_index": 30, "ends_match": true, "wall_s": 8.3}
+{"reaction_id": "R004", "ok": true, "keep_going": true, "inner_failures": 12, "forward_converged": true, "forward_steps": 41, "reverse_converged": true, "reverse_steps": 34, "n_points": 75, "ts_index": 33, "peak_index": 33, "ends_match": true, "wall_s": 6.8}
+{"reaction_id": "R006", "ok": true, "keep_going": true, "inner_failures": 9, "forward_converged": true, "forward_steps": 14, "reverse_converged": true, "reverse_steps": 32, "n_points": 46, "ts_index": 31, "peak_index": 31, "ends_match": true, "wall_s": 4.8}
+{"reaction_id": "R007", "ok": true, "keep_going": true, "inner_failures": 16, "forward_converged": true, "forward_steps": 33, "reverse_converged": true, "reverse_steps": 18, "n_points": 51, "ts_index": 17, "peak_index": 17, "ends_match": true, "wall_s": 4.5}

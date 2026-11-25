@@ -1,0 +1,5 @@
+reaction_id,temperature_k,literature_name,dg_act_a_kcal,dg_act_b_kcal,dg_act_diff_kcal,de_ts_rcx_diff_kcal,de_ts_pcx_diff_kcal,imaginary_a_cm,imaginary_b_cm,rmsd_a
+R001,1000.0,decarboxylation,68.27,67.8,-0.47,0.2,0.05,-2213.76,-2321.53,0.007
+R002,1000.0,,63.28,63.41,0.13,0.17,0.21,-1681.95,-1656.67,1.174
+R003,1000.0,,26.32,27.23,0.91,1.75,1.29,-1784.66,-2416.32,0.017
+R004,1000.0,,2.04,0.82,-1.22,-0.56,-14.78,-1105.3,-1507.66,0.027

@@ -1,0 +1,4 @@
+{"reaction_id": "R001", "ok": true, "forward_converged": true, "forward_steps": 15, "reverse_converged": true, "reverse_steps": 31, "n_points": 46, "ts_index": 30, "peak_index": 30, "ends_match": true, "wall_s": 0.6}
+{"reaction_id": "R002", "ok": true, "forward_converged": true, "forward_steps": 19, "reverse_converged": true, "reverse_steps": 23, "n_points": 42, "ts_index": 22, "peak_index": 22, "ends_match": true, "wall_s": 0.2}
+{"reaction_id": "R003", "ok": true, "forward_converged": true, "forward_steps": 9, "reverse_converged": true, "reverse_steps": 14, "n_points": 23, "ts_index": 13, "peak_index": 13, "ends_match": true, "wall_s": 0.1}
+{"reaction_id": "R004", "ok": true, "forward_converged": true, "forward_steps": 6, "reverse_converged": true, "reverse_steps": 11, "n_points": 17, "ts_index": 10, "peak_index": 10, "ends_match": true, "wall_s": 0.1}

@@ -245,7 +245,8 @@ check. Publishing still needs your yes (section 10).
   each value with its source) and published barriers where they exist.
   Tables give reaction energies, not barriers, so barrier accuracy rests
   on the literature values alone; cpd_ma is reported as a prediction
-  with an uncertainty band.
+  with an uncertainty band. The reference tables are dropped by D23
+  (2026-11-22): DFT single points take their place.
 - **D21. Which ML potentials, and why; Egret removed** (2026-11-21, user
   decision). An engine here must come pretrained (there is no DFT to
   train on, D20), be trained on gas-phase molecules, have seen stretched
@@ -290,6 +291,38 @@ check. Publishing still needs your yes (section 10).
   differ by at most 0.1 kcal/mol, imaginary frequencies by at most
   10 cm^-1, and the RMSD is at most 0.1 A after the best overlay that
   may renumber atoms of one element and may mirror.
+- **D23. DFT single points on the engines' structures, no DFT search**
+  (2026-11-22, user decision; replaces the table part of D20). No
+  reference tables (ATcT, NIST, Burcat) are used. The DFT level is the
+  study's (wB97M-V/def2-TZVPD, TightSCF, ORCA 6.1.1, default grid), and
+  nothing is optimized with it: no DFT saddle search, no DFT minimum, no
+  DFT IRC. A DFT IRC needs a DFT saddle to start from (from an engine's
+  saddle the DFT force is not zero, so it only slides downhill) and a
+  numerical Hessian first (6N gradients, 7-9 h for 20 atoms). Two parts:
+  1. Every stored saddle and molecule of every engine gets a DFT energy
+     on its stored geometry; saddles get the DFT force too (EnGrad).
+     That is 467 jobs: 110 saddles and 357 molecules. Engine barrier
+     against the DFT barrier on the same geometry measures the energy
+     error alone; the DFT force on an engine's saddle shows how far DFT
+     would put its own saddle. DFT free energies are the DFT energy plus
+     the engine's own G - E at the ranking temperature, so no DFT
+     frequencies are needed.
+  2. Each engine's saddle gets an IRC on that engine (Sella, dx 0.1,
+     both sides to 0.05 eV/A, at most 300 steps a side), then DFT
+     single points along it: both ends and five frames a side first,
+     then up to six frames around the highest DFT point, repeated until
+     the top frame's neighbours are done. The DFT saddle is the lowest
+     possible high point of any path between the two basins, so the
+     highest DFT energy on such a path is an upper limit to the DFT
+     saddle energy, and the lowest such peak across engines is the
+     tightest limit. This assumes both path ends lie in the DFT basins
+     of the same molecules; without optimization it is not checked.
+     Scope: every saddle of the three small systems; on cpd_ma only the
+     Diels-Alder endo and exo saddles (each DFT point there takes about
+     2.3 min).
+  Scripts: scripts/checks/dft_single_points.py, ml_irc.py,
+  dft_path_points.py. Outputs: results/dft_sp, results/irc,
+  results/dft_path; ORCA files in runs/.
 
 ## 4. The pipeline, end to end (example: HCHO + NH3)
 

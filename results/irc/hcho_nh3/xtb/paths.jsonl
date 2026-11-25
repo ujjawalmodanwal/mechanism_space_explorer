@@ -1,0 +1,6 @@
+{"reaction_id": "R004", "ok": true, "forward_converged": true, "forward_steps": 16, "reverse_converged": true, "reverse_steps": 22, "n_points": 38, "ts_index": 21, "peak_index": 21, "ends_match": true, "wall_s": 0.3}
+{"reaction_id": "R006", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 0.1}
+{"reaction_id": "R007", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 0.1}
+{"reaction_id": "R013", "ok": true, "forward_converged": true, "forward_steps": 70, "reverse_converged": true, "reverse_steps": 26, "n_points": 96, "ts_index": 25, "peak_index": 25, "ends_match": true, "wall_s": 0.6}
+{"reaction_id": "R006", "ok": true, "keep_going": true, "inner_failures": 1, "forward_converged": true, "forward_steps": 16, "reverse_converged": true, "reverse_steps": 15, "n_points": 31, "ts_index": 14, "peak_index": 14, "ends_match": true, "wall_s": 0.3}
+{"reaction_id": "R007", "ok": true, "keep_going": true, "inner_failures": 394, "forward_converged": false, "forward_steps": 300, "reverse_converged": false, "reverse_steps": 300, "n_points": 600, "ts_index": 299, "peak_index": 299, "ends_match": false, "wall_s": 6.2}

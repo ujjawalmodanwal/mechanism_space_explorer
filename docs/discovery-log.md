@@ -550,6 +550,8 @@ one T4 of a T4 x2 session (float64 at about 1/32 of its float32 rate,
 which explains the 20-atom gap); a P100 should narrow it, untested.
 Confirmed on a second run: model on cuda:0 (Tesla T4), 196 ms per
 20-atom float64 call over 300 calls, peak GPU memory 1810 MB.
+The Mac rows were slowed by the other jobs: on an idle core MACE takes
+218 ms at 20 atoms, not 1151 (7.21).
 
 ### 7.9 DFT cost per gradient (2026-11-19)
 
@@ -785,3 +787,284 @@ first ranking temperature (D16), so a saddle lower in E can lose on G.
 The same alternative appears in hcooh and hcooh_h2o for the same engine
 (xtb +43.6, uma +17.9, mace +15.8, aimnet -2.4), so these are real
 saddles, not noise.
+
+### 7.19 MACE on cpd_ma, and how close UMA and MACE are (2026-11-21)
+
+The Kaggle session (two T4s, cuEquivariance, split of 7.14) hit its
+11.5 h deadline with 33 of 38 reactions and all 44 species done; those
+were merged first. The Kaggle quota had run out, so the last five ran on
+the Mac CPU, one process per reaction, 1 thread each, seeded from xTB,
+--skip-species, each into its own results copy, then joined by
+run_refine.join_single_part (the 33-reaction folder is kept in
+~/mse-archive-2026-11-18/mace_cpd_ma_33_before_local_join).
+
+| reaction | status | wall | counted calls | per counted call |
+| --- | --- | --- | --- | --- |
+| R032 | endpoint_mismatch | 3.28 h | 8456 | 1.40 s |
+| R035 | saddle_not_converged | 3.37 h | 7631 | 1.59 s |
+| R036 | endpoint_mismatch | 2.29 h | 4039 | 2.04 s |
+| R037 | wrong_imaginary_count | 2.47 h | 7715 | 1.15 s |
+| R038 Diels-Alder endo | confirmed (band) | 0.51 h | 1072 | 1.70 s |
+
+All five in 3.4 h wall (11.9 CPU-hours), against 6-8 h expected. A
+counted call costs 1.2-2.0 s on one Mac thread at 20 atoms, against
+0.32 s on a T4 without cuEquivariance (7.13).
+
+MACE on cpd_ma: 8 of 38 confirmed (2 barrierless, 14
+wrong_imaginary_count, 4 endpoint_changed, 7 endpoint_mismatch, 3
+saddle_not_converged; species 42 ok, 2 endpoint_changed). Confirmed on
+cpd_ma: xTB 7, AIMNet2 11, UMA 8, MACE 8, ANI-1xnr 4. Over all 65
+reactions MACE has 24 confirmed (xTB 21, AIMNet2 29, UMA 22, ANI-1xnr
+14). All five engines now cover all four systems.
+
+Diels-Alder at 298.15 K (493.15 K), kcal/mol: endo 22.0 (31.2), exo
+23.7 (32.9), exo minus endo 1.7 (UMA 2.0, AIMNet2 1.1, xTB 2.3; reported
+2.2). Reaction free energy endo -14.2, exo -14.8 (UMA -14.3, -14.8).
+The cpd_ma R027 barrier missing from the 7.17 table is 27.0 (UMA 26.6).
+
+New check `scripts/checks/engine_pair.py` (writes
+data/<system>/checks/pair_<A>_<B>.csv): for every reaction both engines
+confirmed, the free energy barrier gap, the electronic barrier gap from
+the reactant and product complexes, and the saddle RMSD (Kabsch, same
+atom order). UMA against MACE at the first ranking temperature: 20
+shared confirmed saddles with a barrier (hcooh_h2o R007 is confirmed
+without one on MACE); 13 within 0.5 kcal/mol, 15 within 1.0, largest
+2.7.
+
+| system | reaction | MACE minus UMA, dG act | dE act from reactant complex | saddle RMSD |
+| --- | --- | --- | --- | --- |
+| hcooh | R003 CHO2 -> CO2 + H | +0.91 | +1.75 | 0.017 A |
+| hcooh | R004 | -1.22 | -0.56 | 0.027 A |
+| hcooh_h2o | R005 CHO2 -> CO2 + H | +0.92 | +1.75 | 0.017 A |
+| hcho_nh3 | R001 | +2.19 | +1.72 | 0.062 A |
+| cpd_ma | R005 | -2.74 | -2.84 | 0.020 A |
+| cpd_ma | R008 Diels-Alder exo | -1.46 | -1.16 | 0.029 A |
+| cpd_ma | R038 Diels-Alder endo | -1.16 | -0.93 | 0.025 A |
+
+Every gap above 0.5 kcal/mol is the same saddle (RMSD at most 0.06 A),
+and the electronic barrier moves with it, so the two potentials
+disagree on the same geometry; the search did not find different
+saddles. The "within 0.5 kcal/mol on every reaction they share" of 7.17
+holds for the seven reactions in that table, not for all shared
+saddles; REPORT.md is corrected. hcooh R002 has RMSD 1.17 A with
+barriers 0.13 apart, most likely equivalent atoms swapped (the check
+does not try permutations).
+
+### 7.20 DFT single points on the engines' structures (PLAN D23, 2026-11-22 to 23)
+
+Setup: `scripts/checks/dft_single_points.py` runs wB97M-V/def2-TZVPD
+(TightSCF, ORCA 6.1.1) on every stored saddle (EnGrad) and molecule (SP)
+of all five engines: 467 jobs, 110 saddles and 357 molecules (hcooh 18 +
+37, hcooh_h2o 32 + 50, hcho_nh3 22 + 69, cpd_ma 38 + 201). Two ORCA jobs
+at a time, 4 processes and 1500 MB per core each. Check: hcooh xTB R001
+EnGrad gives -189.668530038048 Eh, the 7.12 benchmark value to every
+digit. With the IRC jobs sharing the Mac, an 8-atom EnGrad takes 15-26 s
+(7.12: 11-16 s alone).
+
+First numbers, hcooh (all 55 jobs ok). Barrier from the separated
+reactant molecules, engine minus DFT on the engine's own geometries,
+kcal/mol; in brackets the largest DFT atom force on the engine's saddle,
+eV/A:
+
+| reaction | xTB | AIMNet2 | UMA | MACE | ANI-1xnr |
+| --- | --- | --- | --- | --- | --- |
+| R001 decarboxylation | -3.92 (1.69) | +2.66 (2.02) | +0.60 (0.22) | +0.72 (0.24) | -20.27 (3.00) |
+| R002 HCOOH -> CO + H2O | +10.12 (3.53) | +5.79 (1.46) | 0.00 (0.04) | +0.15 (0.10) | -17.31 (2.87) |
+| R003 CHO2 -> CO2 + H | -24.62 (2.25) | +5.73 (1.29) | +0.44 (0.20) | +2.20 (0.69) | radical |
+| R004 CHO2 -> CO2 + H | -0.78 (1.14) | +5.12 (0.96) | -0.35 (0.16) | -0.95 (0.36) | radical |
+
+The two OMol25 models sit within 1 kcal/mol of DFT on their own
+geometries (MACE R003 2.2), and DFT would barely move their saddles
+(0.04-0.69 eV/A). AIMNet2 is 2.7-5.8 too high with forces of 1-2 eV/A;
+ANI-1xnr is 17-20 too low with forces near 3 eV/A. xTB's reaction
+energy for HCOOH -> CO + H2O is 56.9 against DFT 10.7 (+46.2), the same
+CO-forming error seen against tables in 7.12.
+
+**F16: Sella's IRC stops with `IRCInnerLoopConvergenceFailure` on some
+saddles.** In the first pass of `scripts/checks/ml_irc.py`, 14 of 34
+IRCs raised it (xTB 3 of 16, AIMNet2 11 of 18), each within seconds.
+Fix: the IRC is run again with Sella's `keep_going`, which carries on
+past the failed inner loop; the path is then not an exact IRC, but it
+stays continuous (each step is at most dx), which is all the upper limit
+needs. Rows carry `keep_going` and `inner_failures`. All 14 then gave a
+path, with 1 to 394 inner failures. Two xTB paths ran to the 300-step cap
+on both sides (hcooh_h2o R005, hcho_nh3 R007), and hcho_nh3 R007 ends on
+other molecules than its reaction's, so it does not join the reaction's
+basins: `dft_path_points.py` skips such paths and `dft_compare.py` marks
+them `ends_mismatch`.
+
+IRC totals (all engines done): 80 paths, all with a path; 21 needed
+`keep_going` (AIMNet2 11 of 20, xTB 3 of 16, UMA 3 of 16, MACE 2 of 18,
+ANI-1xnr 2 of 10); 5 have a side that hit the 300-step cap or stopped
+short of 0.05 eV/A (xTB hcooh_h2o R005, hcho_nh3 R007; AIMNet2 hcooh
+R003; UMA hcho_nh3 R001; ANI-1xnr hcooh R001); only xTB hcho_nh3 R007
+ends on other molecules. On every path the engine's highest frame is
+its stored saddle. Cpd_ma Diels-Alder endo and exo: 47-76 frames,
+plain IRC on all four engines.
+
+Final totals (2026-11-23). Single points: 467 of 467 ok. Six molecules
+ended their engine's refinement as `imaginary_minimum` and got no single
+point (`dft_single_points.py` takes only `ok` molecules). Two rows lose
+their barrier for this: hcooh_h2o MACE R007 (CHO2, lowest mode -715
+cm-1) and hcho_nh3 ANI-1xnr R009 (HCOH, -208 cm-1). Path points: 1,158
+on the small systems (17:43-23:11) and 123 on the cpd_ma Diels-Alder
+paths (23:11-03:57, about 5 min each), all ok. Only the Diels-Alder
+paths were run on cpd_ma, as planned.
+
+Mean absolute barrier error per engine and system, kcal/mol, engine
+minus DFT on the engine's own geometries (rows with a number in
+brackets). Last column: the range of the per-system median DFT force on
+the engine's saddles. From `scripts/checks/dft_summary.py`
+(data/<system>/checks/dft_summary.csv):
+
+| engine | hcooh | hcooh_h2o | hcho_nh3 | cpd_ma | median force, eV/A |
+| --- | --- | --- | --- | --- | --- |
+| xTB | 9.86 (4) | 8.67 (6) | 16.59 (4) | 11.32 (7) | 1.0-2.0 |
+| AIMNet2 | 4.83 (4) | 3.07 (8) | 8.02 (6) | 9.21 (11) | 1.2-1.4 |
+| UMA | 0.35 (4) | 0.25 (6) | 0.43 (4) | 1.67 (8) | 0.11-0.19 |
+| MACE | 1.01 (4) | 0.52 (7) | 0.93 (4) | 2.61 (8) | 0.15-0.30 |
+| ANI-1xnr | 18.79 (2) | 10.69 (4) | 26.09 (3) | 13.59 (4) | 2.2-3.1 |
+
+- UMA and MACE match DFT on their own saddles. Their few larger misses
+  come with large DFT forces, so DFT would move those saddles: cpd_ma
+  R015 MACE -11.4 (2.1 eV/A), R010 UMA -6.1 (2.7), R024 MACE -4.8 (3.5;
+  UMA's saddle for the same reaction: +0.1 at 0.2), R001 UMA and MACE
+  -2.7 and -2.8 (1.9). One miss has a small force: cpd_ma R005 UMA +2.7
+  (0.24). Both models were trained on OMol25, the level of this
+  reference. So this shows that they keep their training level on
+  reactive structures; it is not an independent test.
+- xTB is too low almost everywhere (mean signed -4.8 to -13.9).
+  AIMNet2-NSE is too high on the two HCOOH systems (+4.8, +2.1) and
+  mixed on the other two (-1.5, -5.1).
+- ANI-1xnr's cpd_ma mean rests on one row, R006 (+49.0). DFT puts its
+  saddle 38.9 below its reactant (xTB's saddle for the same reaction:
+  4.0 below), so this C8H8O reactant may not be a DFT minimum at all, and
+  the error there has no clear meaning. Without R006 the cpd_ma mean is
+  1.8 (3 rows). On the three small systems ANI-1xnr is 10.7-26.1 off.
+- Paths. On UMA and MACE paths the DFT peak sits on the engine's saddle,
+  or within 0.02 of it, except hcho_nh3 R001 (UMA 0.45, 2 frames away;
+  MACE 0.09, 1 frame). The DFT single point at their saddle is then
+  itself an upper limit. On xTB paths the peak sits 0-2.9 above the
+  saddle, up to 4 frames away; AIMNet2 0-2.1 (hcho_nh3 R006 aside);
+  ANI-1xnr 0-10.2. The best limit per reaction (`bound_best`) equals the
+  lowest DFT saddle energy (`saddle_sp_best`) on 13 of the 22 reactions
+  with paths. Where the two differ (by 0.3 to 9.4), the lower point is
+  not a limit: its own path peaks higher.
+- Diels-Alder (cpd_ma R038 endo, R008 exo). DFT upper limits 7.4 (endo)
+  and 9.5 (exo), from MACE's paths; endo is lower by 2.1. Engine minus
+  DFT on its own saddle, endo/exo: xTB -12.5/-12.1, AIMNet2 +5.7/+4.3,
+  UMA +0.7/+0.7, MACE +0.4/-0.2. The DFT force is 0.11 eV/A on the UMA
+  and MACE saddles. xTB's saddles read 6.4 and 8.6 on the same scale,
+  below the limits, but its paths peak 2.1 and 1.9 higher, 4 frames
+  away. Free energy barriers at 298.15 K, DFT energy plus the engine's
+  own G - E: 22.5/24.5 on UMA geometries and 21.6/24.0 on MACE's,
+  against the engines' own 23.2/25.2 (UMA), 22.0/23.7 (MACE), 25.5/26.6
+  (AIMNet2) and 8.0/10.3 (xTB). ANI-1xnr has no Diels-Alder saddle
+  (7.17).
+- hcho_nh3 R006 (CH2O -> CO + H2): AIMNet2 found another structure; the
+  DFT run is not at fault (`scripts/checks/saddle_geometry.py`,
+  data/hcho_nh3/checks/saddle_geometry_R006.csv). UMA and MACE find an
+  asymmetric saddle: one C-H 1.10 A, the other H 1.60-1.67 A from C, H-H
+  1.25-1.29 A. Their DFT force is 0.16-0.21 eV/A and their DFT barrier
+  87.0 and 86.9. AIMNet2's saddle is symmetric: both C-H 1.29 A, H-H
+  0.93 A. DFT puts it 33.1 above the UMA and MACE saddles, with 10.6
+  eV/A on the carbon, and 15.2 higher again one frame along AIMNet2's
+  path. Its ORCA run is a converged singlet (13 SCF cycles). AIMNet2's
+  own barrier, 103.8, is about 17 above the DFT barrier. ANI-1xnr's
+  saddle is a third structure (C-H 1.22 and 2.01 A, H-H 1.48 A), 37.5
+  above, with 7.7 eV/A on the carbon. xTB's is close to UMA's (C-H 1.08
+  and 1.80 A, H-H 1.35 A), 1.4 above.
+
+### 7.21 One force call per engine, same machine and structures (2026-11-23)
+
+`scripts/checks/force_call_benchmark.py`, Mac CPU, OMP_NUM_THREADS=1 and
+MKL_NUM_THREADS=1, no other jobs. Three warm-up calls, then 30 timed
+calls, each on the structure shaken by 0.01 A Gaussian noise (seed 0);
+median per row. tblite restarts each SCF from the previous call's
+density, as in the searches. Rows in
+`data/benchmarks/force_call_benchmark.csv`.
+
+| Engine | Precision | CPD + MA pair | Endo adduct | xTB saddle R001 |
+|---|---|---|---|---|
+| GFN2-xTB (tblite) | float64 | 3.32 ms | 3.13 ms | 3.26 ms |
+| AIMNet2-NSE | weights mostly float32 | 4.26 ms | 4.28 ms | 4.28 ms |
+| ANI-1xnr | float64 | 4.08 ms | 4.16 ms | 4.00 ms |
+| UMA-S 1.2.1 (omol) | float32 | 38.8 ms | 38.7 ms | 37.7 ms |
+| MACE-OMol25 extra_large | float64 | 222 ms | 224 ms | 218 ms |
+
+All 20 atoms. MACE used one core: 24.4 s of CPU time against 24.8 s of
+wall time for 103 calls plus loading, and VECLIB_MAXIMUM_THREADS=1 gives
+the same 217 ms. Correction to 7.8: its Mac rows (277 ms at 5 atoms,
+1151 ms at 20) were taken with other jobs running; on an idle core
+MACE costs 218 ms, about 5x less. On the pair, MACE takes 54x
+ANI-1xnr's time and 67x xTB's; ANI-1xnr and AIMNet2 sit within 1.3x of
+xTB. UMA costs 39 ms, so MACE takes 5.7x UMA's time, not the
+about 10x of 7.6 (also measured under load). The 4.5 ms of 7.16 repeats as 4.0-4.2 ms. Wall-time costs in 7.6,
+7.13 and 7.19 stand (the real runs shared the machine); only the
+per-call comparison changes. REPORT.md 4.5 and the LaTeX cost table
+said 1150 ms and 'about 10x' for UMA; both corrected the same day.
+
+UMA first failed to load: torch compiles part of the model, and its
+precompiled header in the system temp folder had a changed mtime, so
+clang refused it. Run with TMPDIR and TORCHINDUCTOR_CACHE_DIR pointing
+at a fresh folder; deleting the stale
+`$TMPDIR/torchinductor_$USER/precompiled_headers` folder fixes it for
+later runs.
+
+Machine: Apple M5, 10 cores (4 performance, 6 efficiency), 16 GB. The
+timings above ran on a performance core: forced onto the efficiency
+cores (`taskpolicy -c background`), xTB on the pair takes 20.5 ms
+against 3.2 ms by default. Eight jobs on four performance cores would
+put some on efficiency cores, which fits the 5x slower MACE call of 7.8.
+
+UMA size, counted on the loaded model: uma-s-1p2p1 holds 291.5 million
+parameters (64 experts per mixed layer) and, with fairchem's default
+`merge_mole=True`, merges them into 6.3 million for the CPD + MA pair
+before the first call. It runs in float32 on CPU (fairchem's `nitro`
+mode needs CUDA) and compiles the merged model (`compile=True`).
+
+### 7.22 The report updated with the DFT check (2026-11-25)
+
+The LaTeX report (`reports/present_study/main.pdf`, now 14 pages) carries
+7.20. Before the update, every number in it was checked: running
+`scripts/report/report_figures.py` in a scratch copy rebuilt
+`numbers_table.tex` byte for byte, and the text claims matched it and the
+refine CSVs. New numbers below come from `data/<system>/checks/dft_compare.csv`
+and `dft_summary.csv`.
+
+- Figure 4 compared reaction free energies with gas-phase tables. D23
+  dropped the tables, so `fig4_dft` replaces it: engine minus DFT on the
+  engine's own structures, every barrier and reaction energy, symlog
+  axis. New `generated/dft_table.tex` (mean absolute barrier error per
+  system, range of the median DFT force). Figures 5 and 6 gain open
+  markers for DFT on each engine's structures (`dg_barrier_dft_<T>`); the
+  appendix table gains two DFT blocks.
+- Barriers within 1 kcal/mol of DFT: UMA 18 of 22, MACE 17 of 23, AIMNet2
+  2 of 29, xTB 3 of 21, ANI-1xnr 1 of 13. Too low: xTB 16 of 21.
+- HCOOH at 1000 K, DFT free-energy barriers on each engine's structures,
+  decarboxylation / dehydration: xTB 68.81 / 64.55, AIMNet2 76.89 / 73.27,
+  UMA 67.67 / 63.28, MACE 67.08 / 63.26, ANI-1xnr 80.50 / 62.83.
+  Dehydration leads on every engine's structures (3.6-4.4; ANI-1xnr 17.7),
+  so xTB's reversed order (9.8 the other way) comes from its energies.
+- Diels-Alder at 298.15 K, DFT on each engine's structures, endo / exo:
+  xTB 20.46 / 22.40, AIMNet2 19.84 / 22.30, UMA 22.52 / 24.54, MACE
+  21.60 / 23.99. Endo leads by 1.9-2.5 (reported 2.2).
+- HCHO + NH3 -> aminomethanol at 298.15 K, DFT on all five engines'
+  structures: 37.65-39.21, above the literature guides (31.4; about 34).
+- Reaction energies: xTB's CO-forming errors are +46.2 (hcooh R002,
+  hcooh_h2o R003) and +38.7 (hcho_nh3 R006); UMA and MACE are within 0.1.
+- New outlier, cpd_ma R001 (C5H6 + C4H2O3 -> C9H8O3). DFT puts the
+  product 35.9, 42.50, 43.37 and 36.84 above the reactants on the xTB,
+  UMA, MACE and ANI-1xnr structures: above each engine's DFT saddle
+  energy (29.0, 31.5, 31.9, 20.1). Engine minus DFT: UMA -17.6, MACE
+  -17.8, xTB -34.5, ANI-1xnr -33.9. It makes up most of UMA's and MACE's
+  cpd_ma reaction-energy means (2.26 and 2.55). The product is two
+  five-membered rings joined by one C-C bond (1.585 A on UMA's
+  structure). All four ORCA runs are RHF singlets, converged in 16
+  cycles. So the product may not be a DFT minimum, or it may be a singlet
+  biradical that closed-shell DFT overrates. An open-shell
+  (broken-symmetry) single point has not been run.
+- Also fixed in the report: the stale "DFT on hold", "no IRC" and "no
+  DFT reference" lines, the missing xTB row in the cost table, and
+  "AIMNet2 above the two OMol25 models by 2.2-21.5" (that range is from
+  their mean; against UMA alone the exo gap is 1.4).

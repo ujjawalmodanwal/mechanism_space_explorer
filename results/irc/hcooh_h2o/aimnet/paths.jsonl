@@ -1,0 +1,11 @@
+{"reaction_id": "R001", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 6.3}
+{"reaction_id": "R003", "ok": true, "forward_converged": true, "forward_steps": 37, "reverse_converged": true, "reverse_steps": 40, "n_points": 77, "ts_index": 39, "peak_index": 39, "ends_match": true, "wall_s": 3.0}
+{"reaction_id": "R004", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 2.6}
+{"reaction_id": "R005", "ok": false, "note": "IRCInnerLoopConvergenceFailure: ", "wall_s": 1.0}
+{"reaction_id": "R006", "ok": true, "forward_converged": true, "forward_steps": 58, "reverse_converged": true, "reverse_steps": 26, "n_points": 84, "ts_index": 25, "peak_index": 25, "ends_match": true, "wall_s": 4.5}
+{"reaction_id": "R007", "ok": true, "forward_converged": true, "forward_steps": 6, "reverse_converged": true, "reverse_steps": 18, "n_points": 24, "ts_index": 17, "peak_index": 17, "ends_match": true, "wall_s": 1.0}
+{"reaction_id": "R008", "ok": true, "forward_converged": true, "forward_steps": 17, "reverse_converged": true, "reverse_steps": 109, "n_points": 126, "ts_index": 108, "peak_index": 108, "ends_match": true, "wall_s": 5.8}
+{"reaction_id": "R010", "ok": true, "forward_converged": true, "forward_steps": 39, "reverse_converged": true, "reverse_steps": 21, "n_points": 60, "ts_index": 20, "peak_index": 20, "ends_match": true, "wall_s": 2.4}
+{"reaction_id": "R001", "ok": true, "keep_going": true, "inner_failures": 18, "forward_converged": true, "forward_steps": 38, "reverse_converged": true, "reverse_steps": 17, "n_points": 55, "ts_index": 16, "peak_index": 16, "ends_match": true, "wall_s": 10.6}
+{"reaction_id": "R004", "ok": true, "keep_going": true, "inner_failures": 14, "forward_converged": true, "forward_steps": 79, "reverse_converged": true, "reverse_steps": 36, "n_points": 115, "ts_index": 35, "peak_index": 35, "ends_match": true, "wall_s": 10.0}
+{"reaction_id": "R005", "ok": true, "keep_going": true, "inner_failures": 28, "forward_converged": true, "forward_steps": 51, "reverse_converged": true, "reverse_steps": 12, "n_points": 63, "ts_index": 11, "peak_index": 11, "ends_match": true, "wall_s": 6.7}
