@@ -2,20 +2,23 @@
 
 Nanoreactor reaction networks with machine-learned potentials.
 
+**Read the report:** [reports/present_study/main.pdf](reports/present_study/main.pdf)
+
 If we swap DFT for a machine-learned potential, does a nanoreactor predict
 different products, or a different route to them? This repository answers
 that for small C/H/N/O systems. Every engine refines the same frozen set
 of candidate reactions, so any difference between the networks comes from
 the engine alone.
 
-Engines: GFN2-xTB, MACE-OMol25, UMA-S 1.2.1, AIMNet2, ANI-1xnr, and DFT
-(ORCA, ωB97M-V/def2-TZVPD) as the reference. Exact checkpoints are
-under "Models and licenses".
+Engines: GFN2-xTB, MACE-OMol25, UMA-S 1.2.1, AIMNet2 and ANI-1xnr. DFT
+(ORCA, ωB97M-V/def2-TZVPD) checks them with single points on their own
+structures. Exact checkpoints are under "Models and licenses".
 
-Status: in progress. xTB, AIMNet2 and UMA have refined all four systems;
-MACE-OMol25 is finishing the last one and ANI-1xnr is running. DFT is on
-hold (`PLAN.md`, D20).
-Results so far, limits and next steps: [REPORT.md](REPORT.md).
+Status: all five engines have refined all four systems. DFT single points
+have checked every stored saddle and molecule (467 structures) and 80
+reaction paths (`PLAN.md`, D23). The network comparison has not run yet.
+Results, limits and next steps: the report above, and
+[REPORT.md](REPORT.md) in plain text.
 
 ## How it works
 
@@ -126,23 +129,22 @@ uv run nrnet refine --system hcho_nh3 --engine xtb
     --seed-from xtb
 ```
 
-The DFT reference runs on a cluster with ORCA, using the same command:
+DFT does not refine here (`PLAN.md`, D23): it gives single points on the
+engines' stored structures and along their IRC paths. The scripts and
+their commands are in [scripts/checks/README.md](scripts/checks/README.md)
+(`dft_single_points.py`, `ml_irc.py`, `dft_path_points.py`,
+`dft_compare.py`).
+
+Then rank, evaluate and draw, against one engine as the reference:
 
 ```bash
-nrnet refine --system hcho_nh3 --engine dft --seed-from xtb
+make figures SYSTEM=hcho_nh3 REFERENCE=xtb \
+    COMPARE=mace,uma,aimnet,ani1xnr
 ```
 
-Then rank, evaluate and draw:
-
-```bash
-make figures SYSTEM=hcho_nh3 REFERENCE=dft \
-    COMPARE=xtb,mace,uma,aimnet,ani1xnr
-```
-
-The figures compare every engine with DFT, so the DFT refine must finish
-first. Until it does, `REFERENCE=xtb COMPARE=mace,aimnet,ani1xnr` gives a
-preview against xTB. `refine` resumes: finished species and reactions are
-skipped on rerun.
+The report's figures and tables come from
+`scripts/report/report_figures.py`. `refine` resumes: finished species and
+reactions are skipped on rerun.
 
 ## Known limits
 
@@ -200,7 +202,7 @@ on:
 - **OMol25.** D. S. Levine et al., "The Open Molecules 2025 (OMol25)
   dataset, evaluations, and models", arXiv:2505.08762 (2025).
 - **UMA.** B. M. Wood et al., "UMA: A family of universal models for
-  atoms", arXiv:2506.23971 (2025).
+  atoms", arXiv:2506.23971v2 (2026).
 - **MACE.** I. Batatia, D. P. Kovács, G. N. C. Simm, C. Ortner,
   G. Csányi, "MACE: Higher order equivariant message passing neural
   networks for fast and accurate force fields", NeurIPS (2022).

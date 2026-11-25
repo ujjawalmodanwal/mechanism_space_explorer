@@ -17,28 +17,28 @@ resulting networks comes from the engine alone. Four reacting systems,
 five engines (GFN2-xTB, MACE-OMol25, UMA-S 1.2.1, AIMNet2-NSE,
 ANI-1xnr), each system reported at its own temperatures.
 
-Status: xTB, AIMNet2-NSE, UMA and ANI-1xnr have refined all four
-systems; MACE-OMol25 has refined three and is finishing the fourth on a
-GPU. The DFT reference (ωB97M-V/def2-TZVPD) is on hold: a full DFT
-refinement would take about five weeks on the available machine, so
-accuracy is judged against gas-phase reference tables and published
-barriers.
+Status: all five engines have refined all four systems. DFT
+(ωB97M-V/def2-TZVPD) refines nothing: a full DFT refinement would take
+about five weeks on the available machine. Instead, DFT single points
+check every structure the engines stored, plus 80 IRC paths (section
+4.2). The write-up with figures:
+[reports/present_study/main.pdf](reports/present_study/main.pdf).
 
 Findings so far:
 
 1. **The engine changes the chemistry.** xTB makes HCOOH
    decarboxylation the faster channel; the OMol25 models make
    dehydration faster by 4-5 kcal/mol, as the literature reports. xTB
-   puts every CO-forming reaction free energy 39-46 kcal/mol above the
-   reference tables; AIMNet2, UMA and MACE land within 0.1-3.5
-   kcal/mol.
+   puts every CO-forming reaction 39-46 kcal/mol above DFT, and DFT on
+   xTB's own structures gives the reported channel order again.
 2. **Training data matters more than architecture.** UMA and MACE, two
    different architectures trained on the same OMol25 data, agree
-   within 0.5 kcal/mol on every barrier they share.
+   within 0.5 kcal/mol on 13 of the 20 saddles they share and within
+   2.7 kcal/mol on all of them, always on the same saddle geometry.
 3. **Selectivity survives, absolute barriers do not.** Every engine that
    found both Diels-Alder saddles favours endo by 1.1-2.3 kcal/mol
    (reported: 2.2), but the endo barrier itself is 8.0 kcal/mol with
-   xTB and 23-26 kcal/mol with the ML engines.
+   xTB and 22-26 kcal/mol with the ML engines.
 4. **Reaction training alone does not help here.** ANI-1xnr, trained on
    nanoreactor data at BLYP, confirmed the fewest transition states, no
    Diels-Alder saddle, and barriers 18 kcal/mol below to 16 above the
@@ -46,6 +46,11 @@ Findings so far:
 5. **The discovery and filtering stages lose information,** measured in
    section 6. A redesign of event detection and transition-state
    finding is planned (section 7).
+6. **DFT single points side with the OMol25 pair.** UMA and MACE stay
+   within 1 kcal/mol of DFT on 18 of 22 and 17 of 23 barriers;
+   AIMNet2 misses by 3.1-9.2 kcal/mol on average, xTB by 8.7-16.6 and
+   ANI-1xnr by 10.7-26.1. UMA and MACE learned from this DFT level, so
+   this is not an independent test (section 4.2).
 
 ## 1. Systems, engines, temperatures
 
@@ -63,7 +68,7 @@ Findings so far:
 | UMA | uma-s-1p2p1, OMol25 task | OMol25 and other sets | yes |
 | AIMNet2-NSE | aimnet2-nse_0 | ωB97M | yes |
 | ANI-1xnr | torchani 2.12 | nanoreactor data, BLYP/TZV2P | no (closed-shell only) |
-| DFT reference | ORCA 6.1.1 | ωB97M-V/def2-TZVPD | on hold |
+| DFT check | ORCA 6.1.1 | ωB97M-V/def2-TZVPD | single points only |
 
 Checkpoints, checksums and licences are in `README.md`. Why other
 potentials (NequIP, Allegro, SpookyNet, CHGNet, M3GNet, ANI-1x/2x,
@@ -120,22 +125,43 @@ dehydration 17 and 8). Rare reactions are not converged.
 | hcooh (4) | 4 | 4 | 4 | 4 | 2 |
 | hcooh_h2o (10) | 6 | 8 | 6 | 8 | 4 |
 | hcho_nh3 (13) | 4 | 6 | 4 | 4 | 4 |
-| cpd_ma (38) | 7 | 11 | 8 | running | 4 |
+| cpd_ma (38) | 7 | 11 | 8 | 8 | 4 |
 
 ANI-1xnr cannot treat radicals, so 2, 3, 3 and 1 reactions of these
 systems are outside its reach.
 
-### 4.2 Reaction free energies against reference tables (kcal/mol)
+### 4.2 Steps against DFT single points (kcal/mol)
 
-Tables: 298 K enthalpies of formation and entropies (NIST/JANAF); heat
-capacity changes ignored.
+DFT (ωB97M-V/def2-TZVPD, ORCA 6.1.1) on every stored saddle and molecule
+of every engine: 467 jobs, no DFT optimization (`PLAN.md` D23, discovery
+log 7.20). Engine minus DFT on the engine's own structures: mean absolute
+barrier error per system, saddles in brackets; last column the range of
+the per-system median DFT force on the engine's saddles.
 
-| Reaction | T (K) | Tables | xTB | AIMNet2 | UMA | MACE | ANI-1xnr |
-|---|---|---|---|---|---|---|---|
-| HCOOH -> CO2 + H2 | 1000 | -26.5 | -38.2 | -29.5 | -30.0 | -29.9 | -45.6 |
-| HCOOH -> CO + H2O | 1000 | -26.7 | +19.5 | -27.8 | -27.0 | -27.1 | -36.0 |
-| HCHO -> CO + H2 | 298 | -8.3 | +31.0 | -5.9 | -7.7 | -7.6 | -1.4 |
-| HCHO -> CO + H2 | 600 | -16.2 | +22.6 | -14.4 | -16.1 | -16.0 | -9.8 |
+| Engine | HCOOH | HCOOH + H2O | HCHO + NH3 | CPD + MA | DFT force, eV/Å |
+|---|---|---|---|---|---|
+| xTB | 9.86 (4) | 8.67 (6) | 16.59 (4) | 11.32 (7) | 0.99-1.97 |
+| AIMNet2-NSE | 4.83 (4) | 3.07 (8) | 8.02 (6) | 9.21 (11) | 1.19-1.38 |
+| UMA | 0.35 (4) | 0.25 (6) | 0.43 (4) | 1.67 (8) | 0.11-0.19 |
+| MACE-OMol25 | 1.01 (4) | 0.52 (7) | 0.93 (4) | 2.61 (8) | 0.15-0.30 |
+| ANI-1xnr | 18.79 (2) | 10.69 (4) | 26.09 (3) | 13.59 (4) | 2.17-3.08 |
+
+- UMA and MACE learned from OMol25 at this level, so their match is not
+  an independent test.
+- xTB puts 16 of its 21 barriers too low and every CO-forming reaction
+  39-46 kcal/mol too high. Rescored with DFT, every engine's structures
+  give dehydration first for HCOOH at 1000 K (by 3.6-4.4 kcal/mol; 17.7
+  on ANI-1xnr's) and endo first for the Diels-Alder pair (by 1.9-2.5).
+- Two cpd_ma structures may not be DFT minima: the one-bond adduct of
+  R001 (DFT puts it 36-43 above the reactants and above each engine's
+  saddle; UMA and MACE are 17.6 and 17.8 below DFT), and the reactant of
+  ANI-1xnr's R006 (DFT puts the saddle 38.9 below it; error +49.0, cpd_ma
+  mean 1.8 without it).
+- IRC paths from every saddle of the small systems and from the
+  Diels-Alder saddles: 79 of 80 end on the reaction's molecules. On UMA
+  and MACE paths the DFT peak sits on the engine's saddle (within 0.02;
+  worst 0.45). Diels-Alder DFT upper limits (energies, MACE paths): endo
+  7.4, exo 9.5.
 
 ### 4.3 Barriers (forward free energy of activation, kcal/mol)
 
@@ -148,8 +174,8 @@ Measured from the separated reacting molecules at 1 atm.
 | HCHO + NH3 -> aminomethanol | 298 | 26.4 | 43.4 | 39.2 | 39.4 | 55.7 | about 34; 31.4 (B3LYP-D3(BJ), Zhang 2023) |
 | aminomethanol -> CH2=NH + H2O | 298 | 60.8 | 58.5 | 55.1 | 55.0 | 41.0 | 55.0-55.9 (Feldmann 2005) |
 | HCHO -> CO + H2 | 298 | 68.1 | 103.2 | 81.5 | 81.9 | 72.6 | |
-| Diels-Alder endo | 298 | 8.0 | 25.5 | 23.2 | running | none found | endo kinetic |
-| Diels-Alder exo | 298 | 10.3 | 26.6 | 25.2 | running | none found | exo minus endo 2.2 |
+| Diels-Alder endo | 298 | 8.0 | 25.5 | 23.2 | 22.0 | none found | endo kinetic |
+| Diels-Alder exo | 298 | 10.3 | 26.6 | 25.2 | 23.7 | none found | exo minus endo 2.2 |
 
 - HCOOH: dehydration minus decarboxylation is +9.8 (xTB), -0.4
   (AIMNet2), -5.0 (UMA), -4.4 (MACE), -14.7 (ANI-1xnr). Only xTB
@@ -163,7 +189,12 @@ Measured from the separated reacting molecules at 1 atm.
 
 ### 4.4 Engine agreement and alternative saddles
 
-- UMA and MACE agree within 0.5 kcal/mol on every shared barrier.
+- UMA and MACE agree within 0.5 kcal/mol on 13 of their 20 shared
+  saddles and within 1.0 on 15. The largest gaps are cpd_ma R005
+  (2.7), hcho_nh3 R001 (2.2) and the Diels-Alder pair (1.2 endo, 1.5
+  exo). The saddle geometries match (RMSD at most 0.06 A) and the
+  electronic barrier moves with the gap, so the two potentials
+  disagree on the same structure (log 7.19).
 - ANI-1xnr departs from the UMA-MACE mean by -18 to +16 kcal/mol, in
   both directions; formaldehyde's hydroxycarbene isomer is not a minimum
   on its surface.
@@ -173,11 +204,15 @@ Measured from the separated reacting molecules at 1 atm.
 
 ### 4.5 Cost
 
+Force calls: one Mac core with nothing else running, median of 30
+calls (discovery log 7.21).
+
 | Engine | Force call (20 atoms) | Refinement wall time |
 |---|---|---|
-| ANI-1xnr | 4.5 ms, Mac CPU | 3-32 min per system |
-| UMA | about 10x faster than MACE, Mac CPU | cpd_ma 5.1 h |
-| MACE-OMol25 | 1150 ms Mac CPU; 268 ms T4 GPU, 129 ms with cuEquivariance | 3.2-9.7 h per small system on a T4 |
+| ANI-1xnr | 4.1 ms, Mac CPU | 3-32 min per system |
+| AIMNet2-NSE | 4.3 ms, Mac CPU | cpd_ma 1.3 h |
+| UMA | 38 ms, Mac CPU | cpd_ma 5.1 h |
+| MACE-OMol25 | 222 ms Mac CPU; 268 ms T4 GPU, 129 ms with cuEquivariance | 3.2-9.7 h per small system on a T4; cpd_ma 33 reactions in 11.5 h on two T4s, the last 5 in 3.4 h on the Mac |
 | DFT, ωB97M-V/def2-TZVPD | gradient 3.6-4.5 min, 4 cores | frequencies 7-9 h per 20-atom structure |
 
 ## 5. Faults found and fixed
@@ -233,23 +268,23 @@ These are measured, not guessed; most need recomputation to fix.
 
 ## 7. Next steps
 
-1. Merge MACE-OMol25 on cpd_ma.
-2. Redesign event detection on the saved trajectories (no new MD):
+1. Redesign event detection on the saved trajectories (no new MD):
    bonds with separate forming and breaking distances or a hidden
    Markov model (as in Zhang et al. 2023), thresholds set from the
    trajectories' own distance distributions, and every event labelled
    instead of dropped.
-3. Find transition states from the frames where bonds change (as in
+2. Find transition states from the frames where bonds change (as in
    AutoMeKin): optimize to a saddle, check the frequencies, follow the
    intrinsic reaction coordinate both ways, keep the path search as a
    fallback, and store every saddle with its frequencies so the best
    barrier can be chosen at every temperature.
-4. Run two studies on that base: the discovery network (does the
+3. Run two studies on that base: the discovery network (does the
    network change with the engine?) and a benchmark on literature
    reactions with high-level references.
-5. Revisit the engines, including the reaction-trained AIMNet2-rxn.
-6. Decide the DFT validation: single points on ML geometries, gas-phase
-   reference tables and coupled-cluster literature barriers.
+4. Revisit the engines, including the reaction-trained AIMNet2-rxn.
+5. DFT saddle searches where the DFT force on an engine's saddle is
+   large, an open-shell DFT single point on the cpd_ma R001 adduct, and
+   a DFT network built from the single points.
 
 ## 8. Reproducing
 
